@@ -1,0 +1,571 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+// Este es tu archivo de esquema de Prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==========================================
+// 1. Tabla de Clientes 
+// ==========================================
+model Client {
+  id                String   @id @default(uuid())
+  
+  // Datos Fiscales Obligatorios (CFDI 4.0)
+  rfc               String   @unique
+  //email             String?
+  
+  nombreRazonSocial String   // EXACTO a la CIF (Mayúsculas)
+  regimenFiscal     String   // Clave SAT (ej. 601, 626)
+  cp                String   // Código Postal Fiscal
+  usoCfdiDefault    String   @default("G03") // Por defecto Gastos en General
+
+  // Datos de Domicilio (Extraídos de la CIF)
+  calle             String?
+  numExterior       String?
+  numInterior       String?
+  colonia           String?
+  municipio         String?
+  estado            String?
+  pais              String   @default("MEXICO")
+
+  // Contacto y Administración
+  email             String?
+  emailOpcional1    String?
+  emailOpcional2    String?
+  telefono          String?
+  celular           String?
+  tipoPersona       String?  // Fisica o Moral
+  
+  // Relaciones
+  facturas          Factura[]
+  cotizaciones      Cotizacion[]
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+// ==========================================
+// 2. Tabla de Productos
+// ==========================================
+model Product {
+  id               String   @id @default(uuid())
+
+  // Datos del Producto
+  numeroInterno    String?  // Número interno (folio propio)
+  nombre           String
+  codigoInterno    String?  // SKU / Código interno opcional
+  descripcion      String
+  precio           Decimal  @db.Decimal(15, 6) // 6 decimales para precios exactos
+
+  // Impuestos Federales
+  ivaTasa          Decimal  @default(0.16) @db.Decimal(5, 4) // 0.16 = 16%, 0.08 = 8%, 0.00 = exento
+  iepsTasa         Decimal  @default(0.00) @db.Decimal(5, 4) // IEPS opcional
+  
+  // CFDI 4.0 SAT (Obligatorios)
+  claveProdServ    String   // Clave SAT del producto (ej. 43202009)
+  claveUnidad      String   // Clave SAT de unidad (ej. H87, E48, KGM)
+  unidad           String   // Nombre de la unidad (ej. Pieza, Servicio)
+  objetoImpuesto   String   @default("02") // 01=No objeto, 02=Sí objeto, 03=Sí objeto no obligado
+
+  // Opcionales
+  cuentaPredial    String?  // Para bienes inmuebles
+  numeroPedimento  String?  // Información aduanera
+  impuestoLocal    Decimal? @db.Decimal(5, 4) // Tasa de impuesto local si aplica
+  
+  // Relaciones (Corregido el error tipográfico onceptosFactura)
+  conceptosFactura    ConceptoFactura[]
+  conceptosCotizacion ConceptoCotizacion[]
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+// ==========================================
+// 3. Tabla de Facturas (CFDI 4.0 - Ingreso)
+// ==========================================
+model Factura {
+  id              String   @id @default(uuid())
+
+  // Identificación del comprobante
+  serie           String   @default("A")
+  folio           String
+  fecha           DateTime
+  lugarExpedicion String  // CP del emisor
+  
+  // facturaglobal
+  esGlobal          Boolean @default(false)
+  periodicidad      String? // 01-Diaria, 02-Semanal, etc.
+  mes               String? // 01-Enero, etc.
+  anio              Int?
+  
+  // Tipo de comprobante
+  tipoComprobante String  @default("I") // I=Ingreso, E=Egreso, T=Traslado, N=Nómina, P=Pago
+
+  // Pago
+  formaPago       String   // Clave SAT (01=Efectivo, 03=Transferencia, etc.)
+  metodoPago      String   // PUE o PPD
+  moneda          String   @default("MXN")
+  tipoCambio      Decimal  @default(1) @db.Decimal(10, 6)
+  condicionesPago String?
+
+  // Receptor (relación con Client)
+  clientId        String
+  client          Client   @relation(fields: [clientId], references: [id])
+  usoCFDI         String   // Clave SAT (G01, G03, etc.)
+
+  // Totales
+  subtotal        Decimal  @db.Decimal(15, 2)
+  descuento       Decimal  @default(0) @db.Decimal(15, 2)
+  totalIVA        Decimal  @default(0) @db.Decimal(15, 2)
+  totalIEPS       Decimal  @default(0) @db.Decimal(15, 2)
+  retencionIVA    Decimal  @default(0) @db.Decimal(15, 2)
+  retencionISR    Decimal  @default(0) @db.Decimal(15, 2)
+  total           Decimal  @db.Decimal(15, 2)
+
+  // Estado del CFDI
+  estado          String   @default("BORRADOR") // BORRADOR, TIMBRADO, CANCELADO
+  uuid            String?  // UUID del SAT (después de timbrar)
+  xmlTimbrado     String?  // XML firmado por el PAC
+  pdfUrl          String?  // URL del PDF generado
+
+  // Notas internas
+  notas           String?
+
+  // Conceptos (relación 1:N)
+  conceptos       ConceptoFactura[]
+
+  // AQUÍ ESTÁ EL APARTADO 3 INSERTADO: Relación con la Cotización de origen
+  cotizacionId    String?
+  cotizacion      Cotizacion? @relation(fields: [cotizacionId], references: [id])
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([serie, folio]) // No puede haber dos facturas con misma serie+folio
+}
+
+// ==========================================
+// 4. Conceptos de la Factura
+// ==========================================
+model ConceptoFactura {
+  id              String   @id @default(uuid())
+  noIdentificacion  String? // <- Para guardar el folio del ticket
+  // Relación con la factura
+  facturaId       String
+  factura         Factura  @relation(fields: [facturaId], references: [id], onDelete: Cascade)
+
+  // Relación opcional con producto del catálogo
+  productId       String?
+  product         Product? @relation(fields: [productId], references: [id])
+
+  // Datos del concepto (CFDI 4.0)
+  claveProdServ   String   // Clave SAT
+  claveUnidad     String   // Clave SAT de unidad
+  unidad          String   // Nombre de la unidad
+  descripcion     String   // Descripción editable
+  cantidad        Decimal  @db.Decimal(15, 6)
+  precioUnitario  Decimal  @db.Decimal(15, 6)
+  descuento       Decimal  @default(0) @db.Decimal(15, 2)
+  importe         Decimal  @db.Decimal(15, 2) // cantidad * precioUnitario - descuento
+
+  // Impuestos del concepto
+  objetoImpuesto  String   @default("02")
+  ivaTasa         Decimal  @default(0.16) @db.Decimal(5, 4)
+  iepsTasa        Decimal  @default(0.00) @db.Decimal(5, 4)
+  ivaImporte      Decimal  @default(0) @db.Decimal(15, 2)
+  iepsImporte     Decimal  @default(0) @db.Decimal(15, 2)
+
+  createdAt       DateTime @default(now())
+}
+
+// ==========================================
+// 5. Tabla de Cotizaciones
+// ==========================================
+model Cotizacion {
+  id               String   @id @default(uuid())
+  serie            String   @default("COT")
+  folio            String
+  fecha            DateTime @default(now())
+  fechaVencimiento DateTime? // Opcional: ¿hasta cuándo es válida?
+
+  // Relación con Cliente
+  clientId         String
+  client           Client   @relation(fields: [clientId], references: [id])
+
+  // Totales (Exactamente igual que la Factura)
+  subtotal         Decimal  @db.Decimal(15, 2)
+  descuento        Decimal  @default(0) @db.Decimal(15, 2)
+  totalIVA         Decimal  @default(0) @db.Decimal(15, 2)
+  totalIEPS        Decimal  @default(0) @db.Decimal(15, 2)
+  retencionIVA     Decimal  @default(0) @db.Decimal(15, 2)
+  retencionISR     Decimal  @default(0) @db.Decimal(15, 2)
+  total            Decimal  @db.Decimal(15, 2)
+
+  // Datos Comerciales
+  moneda           String   @default("MXN")
+  tipoCambio       Decimal  @default(1) @db.Decimal(10, 6)
+  condicionesPago  String?
+  notas            String?
+
+  // Control de Estado
+  // Estados posibles: BORRADOR, ENVIADA, ACEPTADA, RECHAZADA, FACTURADA
+  estado           String   @default("BORRADOR") 
+
+  // Relaciones
+  conceptos        ConceptoCotizacion[]
+  facturas         Factura[] // Relación: Una cotización puede generar una o más facturas
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([serie, folio])
+}
+
+// ==========================================
+// 6. Conceptos de la Cotización
+// ==========================================
+model ConceptoCotizacion {
+  id              String     @id @default(uuid())
+  
+  cotizacionId    String
+  cotizacion      Cotizacion @relation(fields: [cotizacionId], references: [id], onDelete: Cascade)
+
+  productId       String?
+  product         Product?   @relation(fields: [productId], references: [id])
+
+  // Datos del concepto
+  claveProdServ   String   
+  claveUnidad     String   
+  unidad          String   
+  descripcion     String   
+  cantidad        Decimal  @db.Decimal(15, 6)
+  precioUnitario  Decimal  @db.Decimal(15, 6)
+  descuento       Decimal  @default(0) @db.Decimal(15, 2)
+  importe         Decimal  @db.Decimal(15, 2)
+
+  // Impuestos
+  objetoImpuesto  String   @default("02")
+  ivaTasa         Decimal  @default(0.16) @db.Decimal(5, 4)
+  iepsTasa        Decimal  @default(0.00) @db.Decimal(5, 4)
+  ivaImporte      Decimal  @default(0) @db.Decimal(15, 2)
+  iepsImporte     Decimal  @default(0) @db.Decimal(15, 2)
+
+  createdAt       DateTime @default(now())
+}
+// login
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   // Hash de bcrypt
+  nombre    String
+  rol       String   @default("ADMIN")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model LoginAttempt {
+  id        String   @id @default(uuid())
+  email     String
+  ip        String?
+  success   Boolean
+  createdAt DateTime @default(now())
+}
+
+// ==========================================
+// 7. Catálogos del SAT (Autocompletado)
+// ==========================================
+model SatClaveProdServ {
+  id          String   @id @default(uuid())
+  clave       String   @unique // Ej. "43202009"
+  descripcion String   // Ej. "Discos duros"
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model SatClaveUnidad {
+  id          String   @id @default(uuid())
+  clave       String   @unique // Ej. "H87"
+  nombre      String   // Ej. "Pieza"
+  descripcion String?  // Descripción extendida opcional
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+model FacturaRecibida {
+  id             String   @id @default(uuid())
+  uuid           String   @unique
+  emisorRfc      String
+  emisorNombre   String
+  receptorRfc    String
+  fechaEmision   DateTime
+  total          Decimal
+  moneda         String   @default("MXN")
+  efectoCfdi     String   @default("I") // I=Ingreso, E=Egreso, etc.
+  xmlContenido   String?  // El XML original guardado
+  estadoSat      String   @default("VIGENTE") // VIGENTE o CANCELADO
+  createdAt      DateTime @default(now())
+}
+model SolicitudSat {
+  id           String   @id @default(uuid())
+  requestId    String   @unique
+  fechaInicio  DateTime
+  fechaFin     DateTime
+  estado       String   @default("PENDIENTE") // PENDIENTE, COMPLETADA, RECHAZADA, ERROR
+  mensajeSat   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ==========================================
+// 8. Módulo de Nómina (Empleados y Recibos)
+// ==========================================
+
+model Empleado {
+  id              String  @id @default(uuid())
+  nombre          String
+  apellidoPaterno String
+  apellidoMaterno String?
+  curp            String  @unique
+  nss             String?
+  rfc             String  @unique
+  calle           String?
+  colonia         String?
+  numExterior     String?
+  numInterior     String?
+  cp              String
+  localidad       String?
+  municipio       String?
+  estado          String?
+  email           String?
+
+  // Datos Laborales
+  grupo                String?
+  sucursal             String?
+  fechaRelacionLaboral DateTime
+  salario              Decimal  @db.Decimal(15, 2)
+  salarioCuotas        Decimal  @db.Decimal(15, 2) // Salario Diario Integrado
+  contrato             String // Catálogo SAT: 01, 02...
+  regimenContratacion  String // Catálogo SAT: 02, 03...
+  riesgoPuesto         String // Catálogo SAT: 1, 2, 3, 4, 5
+  tipoJornada          String // Catálogo SAT: 01, 02...
+  periodicidad         String // Catálogo SAT: 04 (Quincenal), etc.
+  departamento         String?
+  puesto               String?
+  numEmpleado          String   @unique
+  banco                String? // Catálogo SAT Bancos
+  clabe                String?
+
+  activo  Boolean        @default(true)
+  recibos ReciboNomina[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ReciboNomina {
+  id         String   @id @default(uuid())
+  empleadoId String
+  empleado   Empleado @relation(fields: [empleadoId], references: [id])
+
+  // Fechas y periodo
+  fechaPago        DateTime
+  fechaInicialPago DateTime
+  fechaFinalPago   DateTime
+  numDiasPagados   Decimal  @db.Decimal(5, 2)
+
+  // Totales (Requeridos por CFDI)
+  totalPercepciones Decimal @default(0) @db.Decimal(15, 2)
+  totalDeducciones  Decimal @default(0) @db.Decimal(15, 2)
+  totalOtrosPagos   Decimal @default(0) @db.Decimal(15, 2) // Opcional, util si hay subsidio
+  totalNeto         Decimal @default(0) @db.Decimal(15, 2)
+
+  // Control de Timbrado
+  uuid         String? @unique
+  xmlTimbrado  String? @db.Text // Importante usar @db.Text para que quepa el XML completo
+  estado       String  @default("BORRADOR") // TIMBRADO, CANCELADO, ERROR
+  mensajeError String? @db.Text
+
+  // Relaciones hacia el detalle del recibo
+  percepciones      NominaPercepcion[]
+  deducciones       NominaDeduccion[]
+  aprobaciones      NominaAprobacion[]
+  registrosTimbrado RegistroTimbrado[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model NominaPercepcion {
+  id       String       @id @default(uuid())
+  reciboId String
+  recibo   ReciboNomina @relation(fields: [reciboId], references: [id], onDelete: Cascade)
+
+  tipoPercepcion String // Catálogo SAT c_TipoPercepcion (Ej. 001 - Sueldos)
+  clave          String // Clave interna de tu empresa (Ej. SDO)
+  concepto       String // Descripción libre (Ej. "Sueldo Quincenal")
+
+  importeGravado Decimal @default(0) @db.Decimal(15, 2)
+  importeExento  Decimal @default(0) @db.Decimal(15, 2)
+}
+
+model NominaDeduccion {
+  id       String       @id @default(uuid())
+  reciboId String
+  recibo   ReciboNomina @relation(fields: [reciboId], references: [id], onDelete: Cascade)
+
+  tipoDeduccion String // Catálogo SAT c_TipoDeduccion (Ej. 002 - ISR)
+  clave         String // Clave interna (Ej. ISR01)
+  concepto      String // Descripción libre (Ej. "Retención de ISR")
+
+  importe Decimal @db.Decimal(15, 2)
+}
+
+model ConfiguracionFiscal {
+  id String @id @default(uuid())
+
+  // Datos obligatorios
+  rfc             String  @unique
+  razonSocial     String
+  nombreComercial String?
+  regimenFiscal   String
+  codigoPostal    String
+  pais            String  @default("MEX")
+  estado          String?
+  municipio       String?
+  colonia         String?
+  calle           String?
+  numeroExterior  String?
+  numeroInterior  String?
+  telefono        String?
+  email           String?
+
+  // Datos opcionales
+  sitioWeb           String?
+  logoUrl            String?
+  logoMimeType       String?
+  representanteLegal String?
+  registroPatronal   String?
+
+  // Certificados y PAC
+  csdNoCertificado       String?
+  csdCertificadoBase64   String?   @db.Text
+  csdLlaveBase64         String?   @db.Text
+  csdPasswordEncrypted   String?
+  csdVigenteDesde        DateTime?
+  csdVigenteHasta        DateTime?
+  csdEstatus             String    @default("SIN_CARGAR")
+  csdUltimaValidacion    DateTime?
+  fielNoCertificado      String?
+  fielCertificadoBase64  String?   @db.Text
+  fielLlaveBase64        String?   @db.Text
+  fielPasswordEncrypted  String?
+  fielVigenteDesde       DateTime?
+  fielVigenteHasta       DateTime?
+  fielEstatus            String    @default("SIN_CARGAR")
+  fielUltimaValidacion   DateTime?
+
+  pacProveedor         String  @default("FINKOK")
+  pacUsuario           String?
+  pacPasswordEncrypted String?
+  pacAmbiente          String  @default("demo")
+  pacStampUrl          String?
+
+  // Correo saliente
+  correoRemitenteNombre     String?
+  correoRemitenteEmail      String?
+  correoHost                String?
+  correoPuerto              Int?
+  correoSeguro              Boolean @default(false)
+  correoUsuario             String?
+  correoPasswordEncrypted   String?
+  correoEstatus             String  @default("SIN_CONFIGURAR")
+  correoUltimaValidacion    DateTime?
+
+  // Control de timbres
+  folioNominaSerie   String @default("NOM")
+  folioNominaActual  Int    @default(1)
+  timbresContratados Int    @default(0)
+  timbresUsados      Int    @default(0)
+  timbresDisponibles Int    @default(0)
+
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model NominaAprobacion {
+  id             String       @id @default(uuid())
+  reciboNominaId String
+  reciboNomina   ReciboNomina @relation(fields: [reciboNominaId], references: [id], onDelete: Cascade)
+
+  estado         String    @default("PENDIENTE") // PENDIENTE, APROBADA, RECHAZADA
+  comentario     String?   @db.Text
+  aprobadoPor    String?
+  aprobadoEmail  String?
+  aprobadoEn     DateTime?
+  rechazadoPor   String?
+  rechazadoEmail String?
+  rechazadoEn    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([estado])
+  @@index([reciboNominaId])
+}
+
+model RegistroTimbrado {
+  id             String       @id @default(uuid())
+  reciboNominaId String
+  reciboNomina   ReciboNomina @relation(fields: [reciboNominaId], references: [id], onDelete: Cascade)
+
+  estatus         String    @default("PENDIENTE") // EXITOSO, FALLIDO, VALIDACION, PENDIENTE
+  pac             String    @default("FINKOK")
+  ambiente        String    @default("demo")
+  codigoError     String?
+  mensajeError    String?   @db.Text
+  xmlGenerado     String?   @db.Text
+  xmlTimbrado     String?   @db.Text
+  uuid            String?
+  acuseRaw        String?   @db.Text
+  requestPayload  String?   @db.Text
+  responsePayload String?   @db.Text
+  intentos        Int       @default(1)
+  timbradoEn      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([reciboNominaId])
+  @@index([estatus])
+}
+enum RolUsuario {
+  SUPERADMIN
+  ADMIN
+  OPERATIVO
+  USER
+}
+
+model Usuario {
+  id        Int        @id @default(autoincrement())
+  nombre    String
+  email     String     @unique
+  password  String     // En producción asegúrate de encriptar esto (ej. bcrypt)
+  rol       RolUsuario @default(OPERATIVO)
+  
+  // JSON que guarda: { nominas: true, facturasEmitidas: true, facturasRecibidas: false, catalogos: true }
+  modulos   Json?      
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
