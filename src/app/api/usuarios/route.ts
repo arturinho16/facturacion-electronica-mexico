@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { requireAdmin } from '@/lib/auth/session-server';
 import { getDefaultModulesByRole, parseModules } from '@/lib/auth/permissions';
+import { Prisma, type RolUsuario } from '@prisma/client';
 
 export async function GET() {
     const guard = await requireAdmin();
@@ -29,7 +30,7 @@ export async function POST(req: Request) {
         const nombre = String(body.nombre || '').trim();
         const email = String(body.email || '').toLowerCase().trim();
         const password = String(body.password || '');
-        const rol = body.rol === 'ADMIN' ? 'ADMIN' : 'OPERATIVO';
+        const rol: RolUsuario = body.rol === 'ADMIN' ? 'ADMIN' : 'OPERATIVO';
 
         if (!nombre || !email || password.length < 8) {
             return NextResponse.json({ error: 'Nombre, correo y contraseña de al menos 8 caracteres son obligatorios.' }, { status: 400 });
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
                 email,
                 password: hashedPassword,
                 rol,
-                modulos: modulos as unknown as object,
+                modulos: modulos as unknown as Prisma.InputJsonValue,
             },
             select: { id: true, nombre: true, email: true, rol: true, modulos: true, createdAt: true, updatedAt: true },
         });
@@ -66,11 +67,11 @@ export async function PUT(req: Request) {
         const id = Number(body.id);
         if (!Number.isInteger(id)) return NextResponse.json({ error: 'ID inválido.' }, { status: 400 });
 
-        const rol = body.rol === 'ADMIN' ? 'ADMIN' : 'OPERATIVO';
-        const dataToUpdate = {
+        const rol: RolUsuario = body.rol === 'ADMIN' ? 'ADMIN' : 'OPERATIVO';
+        const dataToUpdate: Prisma.UsuarioUpdateInput = {
             nombre: String(body.nombre || '').trim(),
             rol,
-            modulos: (rol === 'ADMIN' ? getDefaultModulesByRole('ADMIN') : parseModules(body.modulos)) as unknown as object,
+            modulos: (rol === 'ADMIN' ? getDefaultModulesByRole('ADMIN') : parseModules(body.modulos)) as unknown as Prisma.InputJsonValue,
         };
 
         const usuarioActualizado = await prisma.usuario.update({

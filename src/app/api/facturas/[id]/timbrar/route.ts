@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { timbrarFactura, DatosFactura, normalizarObjetoImp } from '@/lib/sat/timbrar';
+import { registrarTimbreUsado } from '@/lib/configuracion';
 
 export async function POST(
   _req: NextRequest,
@@ -80,17 +81,21 @@ export async function POST(
 
     const resultado = await timbrarFactura(datosParaTimbrar);
 
-    const facturaActualizada = await prisma.factura.update({
-      where: { id: factura.id },
-      data: {
-        estado: 'TIMBRADO',
-        uuid: resultado.uuid,
-        xmlTimbrado: resultado.xmlTimbrado,
-      },
-      include: {
-        client: true,
-        conceptos: true,
-      },
+    const facturaActualizada = await prisma.$transaction(async (tx) => {
+      const actualizada = await tx.factura.update({
+        where: { id: factura.id },
+        data: {
+          estado: 'TIMBRADO',
+          uuid: resultado.uuid,
+          xmlTimbrado: resultado.xmlTimbrado,
+        },
+        include: {
+          client: true,
+          conceptos: true,
+        },
+      });
+      await registrarTimbreUsado(tx);
+      return actualizada;
     });
 
     return NextResponse.json({
@@ -100,10 +105,11 @@ export async function POST(
       noCertificadoSAT: resultado.noCertificadoSAT,
       factura: facturaActualizada,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error en ruta timbrar:', error);
+    const message = error instanceof Error ? error.message : 'Error interno al timbrar';
     return NextResponse.json(
-      { error: error?.message || 'Error interno al timbrar' },
+      { error: message },
       { status: 500 }
     );
   }

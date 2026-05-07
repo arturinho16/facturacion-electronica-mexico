@@ -32,6 +32,10 @@ export async function POST(req: NextRequest) {
     if (current && !body.correoPassword) {
         payload.correoPasswordEncrypted = current.correoPasswordEncrypted;
     }
+    if (current) {
+        payload.timbresUsados = current.timbresUsados;
+        payload.timbresDisponibles = Math.max(0, payload.timbresContratados - current.timbresUsados);
+    }
 
     const saved = current
         ? await prisma.configuracionFiscal.update({ where: { id: current.id }, data: payload })

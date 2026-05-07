@@ -17,7 +17,7 @@ const borderByColor = {
 
 export function Card({ title, color = 'slate', children, className = '' }: Props) {
   return (
-    <div className={`rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ${borderByColor[color]} ${className}`}>
+    <div className={`rounded-xl border border-slate-200 bg-white p-5 shadow-sm ${borderByColor[color]} ${className}`}>
       {title ? <h3 className="mb-4 text-lg font-bold text-slate-800">{title}</h3> : null}
       {children}
     </div>

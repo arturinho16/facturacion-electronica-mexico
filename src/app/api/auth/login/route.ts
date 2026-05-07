@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { signToken } from '@/lib/auth/jwt';
 import { getDefaultModulesByRole, parseModules } from '@/lib/auth/permissions';
+import { Prisma } from '@prisma/client';
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,8 +33,18 @@ export async function POST(req: NextRequest) {
           nombre: 'Administrador Principal',
           email: normalizedEmail,
           password: hash,
-          rol: 'ADMIN',
-          modulos: getDefaultModulesByRole('ADMIN') as unknown as object,
+          rol: 'SUPERADMIN',
+          modulos: getDefaultModulesByRole('SUPERADMIN') as unknown as Prisma.InputJsonValue,
+        },
+      });
+    }
+
+    if (usuario && normalizedEmail === 'admin@tufisti.com' && (usuario.rol !== 'SUPERADMIN' || !parseModules(usuario.modulos).includes('calculadoras'))) {
+      usuario = await prisma.usuario.update({
+        where: { id: usuario.id },
+        data: {
+          rol: 'SUPERADMIN',
+          modulos: getDefaultModulesByRole('SUPERADMIN') as unknown as Prisma.InputJsonValue,
         },
       });
     }

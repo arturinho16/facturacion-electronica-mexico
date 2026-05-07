@@ -674,12 +674,11 @@ export default function FacturasPage() {
         if (!f) continue;
 
         const facturaData = buildFacturaData(f, emisorConfig);
-        const blob = await pdf(
-          React.createElement(FacturaPDF, {
-            factura: facturaData as any,
-            logoUrl: await getEmpresaLogoUrl(),
-          })
-        ).toBlob();
+        const facturaDoc = React.createElement(FacturaPDF, {
+          factura: facturaData as any,
+          logoUrl: await getEmpresaLogoUrl(),
+        }) as Parameters<typeof pdf>[0];
+        const blob = await pdf(facturaDoc).toBlob();
 
         folderCFDI?.file(`${f.serie}-${f.folio}_${f.client.rfc}.pdf`, blob);
 
@@ -717,12 +716,11 @@ export default function FacturasPage() {
       const React = (await import('react')).default;
 
       const facturaData = buildFacturaData(f, emisorConfig);
-      const blob = await pdf(
-        React.createElement(FacturaPDF, {
-          factura: facturaData as any,
-          logoUrl: await getEmpresaLogoUrl(),
-        })
-      ).toBlob();
+      const facturaDoc = React.createElement(FacturaPDF, {
+        factura: facturaData as any,
+        logoUrl: await getEmpresaLogoUrl(),
+      }) as Parameters<typeof pdf>[0];
+      const blob = await pdf(facturaDoc).toBlob();
 
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -820,12 +818,11 @@ export default function FacturasPage() {
       const React = (await import('react')).default;
 
       const facturaData = buildFacturaData(facturaCorreo, emisorConfig);
-      const blob = await pdf(
-        React.createElement(FacturaPDF, {
-          factura: facturaData as any,
-          logoUrl: await getEmpresaLogoUrl(),
-        })
-      ).toBlob();
+      const facturaDoc = React.createElement(FacturaPDF, {
+        factura: facturaData as any,
+        logoUrl: await getEmpresaLogoUrl(),
+      }) as Parameters<typeof pdf>[0];
+      const blob = await pdf(facturaDoc).toBlob();
 
       const reader = new FileReader();
       reader.readAsDataURL(blob);

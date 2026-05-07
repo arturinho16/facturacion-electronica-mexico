@@ -18,6 +18,7 @@ import {
   KeyRound,
   Loader2,
   Mail,
+  Palette,
   PlusCircle,
   RotateCcw,
   Save,
@@ -29,7 +30,7 @@ import {
   XCircle,
 } from 'lucide-react';
 
-type Tab = 'perfil' | 'usuarios' | 'certificados' | 'correo' | 'sistema' | 'respaldo';
+type Tab = 'perfil' | 'usuarios' | 'certificados' | 'correo' | 'apariencia' | 'sistema' | 'respaldo';
 type Rol = 'SUPERADMIN' | 'ADMIN' | 'OPERATIVO';
 
 type ConfigFiscal = {
@@ -57,6 +58,9 @@ type ConfigFiscal = {
   pacPassword?: string;
   pacPasswordConfigurado?: boolean;
   folioNominaSerie?: string;
+  timbresContratados?: number;
+  timbresUsados?: number;
+  timbresDisponibles?: number;
   csdEstatus?: string;
   csdMensaje?: string;
   csdNoCertificado?: string;
@@ -77,6 +81,7 @@ type ConfigFiscal = {
   correoPasswordConfigurado?: boolean;
   correoEstatus?: string;
   correoOrigen?: 'BD' | 'ENV';
+  aparienciaHeaderColor?: string;
 };
 
 type Usuario = {
@@ -143,6 +148,7 @@ const MODULOS = [
   { id: 'facturacion', label: 'Facturas' },
   { id: 'factura_global', label: 'Factura global' },
   { id: 'cotizaciones', label: 'Cotizaciones' },
+  { id: 'calculadoras', label: 'Calculadoras' },
   { id: 'clientes', label: 'Clientes' },
   { id: 'productos', label: 'Productos' },
   { id: 'nomina', label: 'Nómina' },
@@ -186,6 +192,9 @@ const emptyConfig: ConfigFiscal = {
   pacPassword: '',
   pacPasswordConfigurado: false,
   folioNominaSerie: 'NOM',
+  timbresContratados: 0,
+  timbresUsados: 0,
+  timbresDisponibles: 0,
   correoRemitenteNombre: '',
   correoRemitenteEmail: '',
   correoHost: '',
@@ -194,6 +203,7 @@ const emptyConfig: ConfigFiscal = {
   correoUsuario: '',
   correoPassword: '',
   correoPasswordConfigurado: false,
+  aparienciaHeaderColor: '#2563eb',
 };
 
 const stringConfigKeys: Array<keyof ConfigFiscal> = [
@@ -234,7 +244,15 @@ const stringConfigKeys: Array<keyof ConfigFiscal> = [
   'correoUsuario',
   'correoPassword',
   'correoEstatus',
+  'aparienciaHeaderColor',
 ];
+
+const APPEARANCE_COLORS = ['#2563eb', '#0f766e', '#4338ca', '#be123c', '#334155', '#047857'] as const;
+
+function normalizeHexColor(value: unknown) {
+  const text = String(value || '').trim();
+  return /^#[0-9A-Fa-f]{6}$/.test(text) ? text : '#2563eb';
+}
 
 function normalizeConfig(data: Partial<ConfigFiscal> = {}): ConfigFiscal {
   const normalized: ConfigFiscal = { ...emptyConfig, ...data };
@@ -245,9 +263,13 @@ function normalizeConfig(data: Partial<ConfigFiscal> = {}): ConfigFiscal {
     }
   }
   normalized.correoPuerto = Number(normalized.correoPuerto || emptyConfig.correoPuerto);
+  normalized.timbresContratados = Math.max(0, Number(normalized.timbresContratados || 0));
+  normalized.timbresUsados = Math.max(0, Number(normalized.timbresUsados || 0));
+  normalized.timbresDisponibles = Math.max(0, Number(normalized.timbresDisponibles ?? normalized.timbresContratados - normalized.timbresUsados));
   normalized.correoSeguro = Boolean(normalized.correoSeguro);
   normalized.pacPasswordConfigurado = Boolean(normalized.pacPasswordConfigurado);
   normalized.correoPasswordConfigurado = Boolean(normalized.correoPasswordConfigurado);
+  normalized.aparienciaHeaderColor = normalizeHexColor(normalized.aparienciaHeaderColor);
   return normalized;
 }
 
@@ -277,7 +299,7 @@ export default function ConfiguracionPage() {
   const [activeTab, setActiveTab] = useState<Tab>('perfil');
   const [config, setConfig] = useState<ConfigFiscal>(() => normalizeConfig());
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-  const [newUser, setNewUser] = useState({ nombre: '', email: '', password: '', rol: 'OPERATIVO' as Rol, modulos: ['dashboard', 'facturacion'] });
+  const [newUser, setNewUser] = useState({ nombre: '', email: '', password: '', rol: 'OPERATIVO' as Rol, modulos: ['dashboard', 'facturacion', 'calculadoras'] });
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [resettingDb, setResettingDb] = useState(false);
@@ -392,6 +414,20 @@ export default function ConfiguracionPage() {
     alert('Configuración guardada.');
   };
 
+  const saveAppearance = async () => {
+    setSaving(true);
+    const res = await fetch('/api/configuracion/apariencia', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ aparienciaHeaderColor: config.aparienciaHeaderColor }),
+    });
+    setSaving(false);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return alert(data.error || 'No se pudo guardar la apariencia.');
+    setConfig(normalizeConfig(data.config));
+    alert('Apariencia guardada.');
+  };
+
   const handleLogo = async (file?: File) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) return alert('Selecciona una imagen válida.');
@@ -432,7 +468,7 @@ export default function ConfiguracionPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return alert(data.error || 'No se pudo crear el usuario.');
-    setNewUser({ nombre: '', email: '', password: '', rol: 'OPERATIVO', modulos: ['dashboard', 'facturacion'] });
+    setNewUser({ nombre: '', email: '', password: '', rol: 'OPERATIVO', modulos: ['dashboard', 'facturacion', 'calculadoras'] });
     await loadUsers();
   };
 
@@ -694,6 +730,7 @@ export default function ConfiguracionPage() {
             {tabButton('usuarios', <Users className="h-5 w-5" />, 'Usuarios y permisos')}
             {tabButton('certificados', <ShieldCheck className="h-5 w-5" />, 'Sellos y e.firma')}
             {tabButton('correo', <Mail className="h-5 w-5" />, 'Correo saliente')}
+            {tabButton('apariencia', <Palette className="h-5 w-5" />, 'Apariencia')}
             {tabButton('sistema', <RotateCcw className="h-5 w-5" />, 'Reinicializar BD')}
             {tabButton('respaldo', <FileArchive className="h-5 w-5" />, 'Respaldo-recuperación')}
           </aside>
@@ -854,9 +891,43 @@ export default function ConfiguracionPage() {
                   </div>
                 ))}
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-                  <Field label="Proveedor PAC"><input name="pacProveedor" className={inputClass} value={config.pacProveedor || 'FINKOK'} onChange={(e) => patchConfig({ pacProveedor: e.target.value })} /></Field>
-                  <Field label="Usuario PAC"><input name="pacUsuario" className={inputClass} value={config.pacUsuario || ''} onChange={(e) => patchConfig({ pacUsuario: e.target.value })} /></Field>
-                  <Field label="Contraseña PAC"><input name="pacPassword" className={inputClass} type="password" autoComplete="new-password" placeholder={config.pacPasswordConfigurado ? 'Guardada, escribir solo para cambiar' : ''} onChange={(e) => patchConfig({ pacPasswordConfigurado: Boolean(e.target.value), ...(e.target.value ? { pacPassword: e.target.value } : {}) })} /></Field>
+                  <Field label="Proveedor PAC"><input name="pacProveedor" className={inputClass} value={config.pacProveedor ?? 'FINKOK'} onChange={(e) => patchConfig({ pacProveedor: e.target.value })} /></Field>
+                  <Field label="Usuario PAC"><input name="pacUsuario" className={inputClass} value={config.pacUsuario ?? ''} onChange={(e) => patchConfig({ pacUsuario: e.target.value })} /></Field>
+                  <Field label="Contraseña PAC"><input name="pacPassword" className={inputClass} type="password" autoComplete="new-password" value={config.pacPassword ?? ''} placeholder={config.pacPasswordConfigurado ? 'Guardada, escribir solo para cambiar' : ''} onChange={(e) => patchConfig({ pacPassword: e.target.value, pacPasswordConfigurado: Boolean(e.target.value || config.pacPasswordConfigurado) })} /></Field>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h3 className="font-bold text-slate-800">Control de timbres</h3>
+                      <p className="text-sm text-slate-500">Se incrementa automáticamente cuando una factura o recibo de nómina queda timbrado con UUID.</p>
+                    </div>
+                    <StatusPill status={Number(config.timbresDisponibles || 0) > 0 ? 'CONFIGURADO' : 'SIN_CONFIGURAR'} />
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <Field label="Timbres contratados">
+                      <input
+                        name="timbresContratados"
+                        className={inputClass}
+                        type="number"
+                        min="0"
+                        value={config.timbresContratados ?? 0}
+                        onChange={(e) => {
+                          const contratados = Math.max(0, Number(e.target.value) || 0);
+                          const usados = Math.max(0, Number(config.timbresUsados || 0));
+                          patchConfig({ timbresContratados: contratados, timbresDisponibles: Math.max(0, contratados - usados) });
+                        }}
+                      />
+                    </Field>
+                    <Field label="Timbres usados">
+                      <input name="timbresUsados" className={inputClass} type="number" value={config.timbresUsados ?? 0} readOnly />
+                    </Field>
+                    <Field label="Timbres disponibles">
+                      <input name="timbresDisponibles" className={inputClass} type="number" value={config.timbresDisponibles ?? 0} readOnly />
+                    </Field>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <button onClick={saveConfig} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700"><Save className="h-4 w-4" /> Guardar timbres</button>
+                  </div>
                 </div>
               </section>
             ) : activeTab === 'correo' ? (
@@ -874,12 +945,12 @@ export default function ConfiguracionPage() {
                   </div>
                 )}
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                  <Field label="Nombre del remitente"><input name="correoRemitenteNombre" className={inputClass} value={config.correoRemitenteNombre || ''} onChange={(e) => patchConfig({ correoRemitenteNombre: e.target.value })} /></Field>
-                  <Field label="Correo del remitente"><input name="correoRemitenteEmail" type="email" className={inputClass} value={config.correoRemitenteEmail || ''} onChange={(e) => patchConfig({ correoRemitenteEmail: e.target.value })} /></Field>
-                  <Field label="Servidor SMTP"><input name="correoHost" className={inputClass} placeholder="smtp.gmail.com" value={config.correoHost || ''} onChange={(e) => patchConfig({ correoHost: e.target.value })} /></Field>
-                  <Field label="Puerto"><input name="correoPuerto" className={inputClass} type="number" value={config.correoPuerto || ''} onChange={(e) => patchConfig({ correoPuerto: Number(e.target.value) })} /></Field>
-                  <Field label="Usuario SMTP"><input name="correoUsuario" className={inputClass} value={config.correoUsuario || ''} onChange={(e) => patchConfig({ correoUsuario: e.target.value })} /></Field>
-                  <Field label="Contraseña SMTP"><input name="correoPassword" className={inputClass} type="password" autoComplete="new-password" placeholder={config.correoPasswordConfigurado ? 'Guardada, escribir solo para cambiar' : ''} onChange={(e) => patchConfig(e.target.value ? { correoPassword: e.target.value } : {})} /></Field>
+                  <Field label="Nombre del remitente"><input name="correoRemitenteNombre" className={inputClass} value={config.correoRemitenteNombre ?? ''} onChange={(e) => patchConfig({ correoRemitenteNombre: e.target.value })} /></Field>
+                  <Field label="Correo del remitente"><input name="correoRemitenteEmail" type="email" className={inputClass} value={config.correoRemitenteEmail ?? ''} onChange={(e) => patchConfig({ correoRemitenteEmail: e.target.value })} /></Field>
+                  <Field label="Servidor SMTP"><input name="correoHost" className={inputClass} placeholder="smtp.gmail.com" value={config.correoHost ?? ''} onChange={(e) => patchConfig({ correoHost: e.target.value })} /></Field>
+                  <Field label="Puerto"><input name="correoPuerto" className={inputClass} type="number" value={config.correoPuerto ?? ''} onChange={(e) => patchConfig({ correoPuerto: e.target.value === '' ? 0 : Number(e.target.value) })} /></Field>
+                  <Field label="Usuario SMTP"><input name="correoUsuario" className={inputClass} value={config.correoUsuario ?? ''} onChange={(e) => patchConfig({ correoUsuario: e.target.value })} /></Field>
+                  <Field label="Contraseña SMTP"><input name="correoPassword" className={inputClass} type="password" autoComplete="new-password" value={config.correoPassword ?? ''} placeholder={config.correoPasswordConfigurado ? 'Guardada, escribir solo para cambiar' : ''} onChange={(e) => patchConfig({ correoPassword: e.target.value, correoPasswordConfigurado: Boolean(e.target.value || config.correoPasswordConfigurado) })} /></Field>
                 </div>
                 <label className="inline-flex items-center gap-2 text-sm font-bold text-slate-600">
                   <input name="correoSeguro" type="checkbox" checked={Boolean(config.correoSeguro)} onChange={(e) => patchConfig({ correoSeguro: e.target.checked })} />
@@ -888,6 +959,74 @@ export default function ConfiguracionPage() {
                 <div className="flex flex-wrap gap-3">
                   <button onClick={saveConfig} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700"><Save className="h-4 w-4" /> Guardar correo</button>
                   <button onClick={testMail} className="inline-flex items-center gap-2 rounded-xl border border-blue-600 bg-white px-5 py-3 text-sm font-bold text-blue-600 hover:bg-blue-50"><Mail className="h-4 w-4" /> Enviar prueba</button>
+                </div>
+              </section>
+            ) : activeTab === 'apariencia' ? (
+              <section className="space-y-6">
+                <div>
+                  <h2 className="text-xl font-bold">Apariencia</h2>
+                  <p className="mt-1 text-sm text-slate-500">Configura el color del encabezado principal donde aparecen el logo y el nombre de la empresa.</p>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                  <div
+                    className="flex flex-col gap-4 rounded-2xl p-5 text-white shadow-sm sm:flex-row sm:items-center sm:justify-between"
+                    style={{ backgroundColor: config.aparienciaHeaderColor || '#2563eb' }}
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white shadow-sm">
+                        {config.logoUrl ? <img src={config.logoUrl} alt="Logo de la empresa" className="h-full w-full object-contain p-1.5" /> : <Settings className="h-5 w-5 text-slate-700" />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-lg font-bold">{config.nombreComercial || config.razonSocial || 'Configura tu empresa'}</p>
+                        <p className="text-sm text-white/80">Sistema de Autofacturación CFDI 4.0</p>
+                      </div>
+                    </div>
+                    <span className="inline-flex w-fit items-center gap-2 rounded-xl bg-white/15 px-3 py-2 text-sm font-bold">
+                      <Palette className="h-4 w-4" /> Vista previa
+                    </span>
+                  </div>
+
+                  <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-[220px_1fr]">
+                    <Field label="Color principal">
+                      <div className="flex items-center gap-3">
+                        <input
+                          name="aparienciaHeaderColor"
+                          type="color"
+                          className="h-12 w-16 cursor-pointer rounded-xl border-2 border-slate-300 bg-white p-1"
+                          value={config.aparienciaHeaderColor || '#2563eb'}
+                          onChange={(e) => patchConfig({ aparienciaHeaderColor: e.target.value })}
+                        />
+                        <input
+                          name="aparienciaHeaderColorHex"
+                          className={inputClass}
+                          value={config.aparienciaHeaderColor || '#2563eb'}
+                          onChange={(e) => patchConfig({ aparienciaHeaderColor: normalizeHexColor(e.target.value) })}
+                          maxLength={7}
+                        />
+                      </div>
+                    </Field>
+
+                    <div className="space-y-2">
+                      <p className="text-xs font-bold uppercase text-slate-500">Colores sugeridos</p>
+                      <div className="flex flex-wrap gap-2">
+                        {APPEARANCE_COLORS.map((color) => (
+                          <button
+                            key={color}
+                            type="button"
+                            onClick={() => patchConfig({ aparienciaHeaderColor: color })}
+                            className={`h-10 w-10 rounded-xl border-2 shadow-sm transition ${config.aparienciaHeaderColor === color ? 'border-slate-900 ring-4 ring-slate-900/10' : 'border-white hover:border-slate-300'}`}
+                            style={{ backgroundColor: color }}
+                            aria-label={`Usar color ${color}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button onClick={saveAppearance} disabled={saving} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60">
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Guardar apariencia
+                  </button>
                 </div>
               </section>
             ) : activeTab === 'respaldo' ? (

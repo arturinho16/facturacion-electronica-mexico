@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireModule } from '@/lib/auth/session-server';
-import { getActiveConfig, getCsdCredentials } from '@/lib/configuracion';
+import { getActiveConfig, getCsdCredentials, registrarTimbreUsado } from '@/lib/configuracion';
 import { generarXMLNomina } from '@/app/nomina/facturacion-masiva/utils/generarXMLNomina';
 import { validarXMLNomina } from '@/app/nomina/facturacion-masiva/utils/validarXMLNomina';
 import { generarCadenaOriginal, inyectarCertificado, inyectarSello, sellarCadena } from '@/lib/nomina/sellado';
@@ -129,12 +129,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: mensajeError }, { status: 500 });
     }
 
-    await prisma.$transaction([
-      prisma.reciboNomina.update({
+    await prisma.$transaction(async (tx) => {
+      await tx.reciboNomina.update({
         where: { id: recibo.id },
         data: { estado: 'TIMBRADO', uuid, xmlTimbrado, mensajeError: null },
-      }),
-      prisma.registroTimbrado.create({
+      });
+      await tx.registroTimbrado.create({
         data: {
           reciboNominaId: recibo.id,
           estatus: 'EXITOSO',
@@ -145,8 +145,9 @@ export async function POST(req: NextRequest) {
           uuid,
           timbradoEn: new Date(),
         },
-      }),
-    ]);
+      });
+      await registrarTimbreUsado(tx);
+    });
 
     return NextResponse.json({ ok: true, reciboId: recibo.id, uuid });
   } catch (error: unknown) {

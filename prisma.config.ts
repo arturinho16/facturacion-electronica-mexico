@@ -16,10 +16,6 @@ export default defineConfig({
     path: "prisma/migrations",
     seed: "npx tsx prisma/seed.ts",
   },
-  client: {
-    adapter: "postgresql",
-    url: process.env.DATABASE_URL,
-  },
   datasource: {
     url: process.env.DATABASE_URL,
   },

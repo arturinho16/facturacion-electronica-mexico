@@ -6,17 +6,28 @@ export const MODULOS_SISTEMA = [
     'clientes',
     'productos',
     'cotizaciones',
+    'calculadoras',
     'descargas_sat',
     'consolidado_recibidas',
     'configuracion',
 ] as const;
 
 export type ModuloSistema = (typeof MODULOS_SISTEMA)[number];
+export type RolSistema = 'SUPERADMIN' | 'ADMIN' | 'OPERATIVO';
 
 // Agregamos 'SUPERADMIN' a los tipos permitidos
-export function getDefaultModulesByRole(rol: 'SUPERADMIN' | 'ADMIN' | 'OPERATIVO'): ModuloSistema[] {
+export function getDefaultModulesByRole(rol: RolSistema): ModuloSistema[] {
     if (rol === 'SUPERADMIN' || rol === 'ADMIN') return [...MODULOS_SISTEMA];
-    return ['dashboard', 'facturacion', 'factura_global', 'clientes', 'productos', 'cotizaciones'];
+    return ['dashboard', 'facturacion', 'factura_global', 'clientes', 'productos', 'cotizaciones', 'calculadoras'];
+}
+
+export function roleHasAllModules(rol: unknown) {
+    const normalized = String(rol || '').replace(/[\s_-]/g, '').toUpperCase();
+    return normalized === 'SUPERADMIN' || normalized === 'ADMIN';
+}
+
+export function isRootSuperUser(email: unknown) {
+    return String(email || '').toLowerCase().trim() === 'admin@tufisti.com';
 }
 
 export function parseModules(input: unknown): ModuloSistema[] {

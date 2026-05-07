@@ -1,5 +1,7 @@
 import path from 'path';
-import SftpClient from 'ssh2-sftp-client';
+import { createRequire } from 'module';
+
+const nodeRequire = createRequire(import.meta.url);
 
 export type SftpBackupConfig = {
   host: string;
@@ -8,6 +10,22 @@ export type SftpBackupConfig = {
   password: string;
   remotePath: string;
 };
+
+type SftpClientLike = {
+  connect(config: {
+    host: string;
+    port: number;
+    username: string;
+    password: string;
+    readyTimeout: number;
+  }): Promise<void>;
+  end(): Promise<void>;
+  list(remotePath: string): Promise<unknown>;
+  mkdir(remotePath: string, recursive?: boolean): Promise<unknown>;
+  put(input: Buffer, remotePath: string): Promise<unknown>;
+};
+
+type SftpClientConstructor = new (name?: string) => SftpClientLike;
 
 export function buildSftpConfig(value: Record<string, unknown>): SftpBackupConfig {
   return {
@@ -29,8 +47,9 @@ export function validateSftpConfig(config: SftpBackupConfig) {
   }
 }
 
-export async function withSftpClient<T>(config: SftpBackupConfig, task: (client: SftpClient) => Promise<T>) {
+export async function withSftpClient<T>(config: SftpBackupConfig, task: (client: SftpClientLike) => Promise<T>) {
   validateSftpConfig(config);
+  const SftpClient = nodeRequire(['ssh2', '-sftp-client'].join('')) as SftpClientConstructor;
   const client = new SftpClient('backup-sftp');
 
   try {

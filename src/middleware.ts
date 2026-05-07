@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth/jwt';
+import { isRootSuperUser, roleHasAllModules } from '@/lib/auth/permissions';
 
 const routeModuleMap: Array<{ prefix: string; modulo: string }> = [
   { prefix: '/nomina', modulo: 'nomina' },
@@ -7,12 +8,14 @@ const routeModuleMap: Array<{ prefix: string; modulo: string }> = [
   { prefix: '/facturas/global', modulo: 'factura_global' },
   { prefix: '/facturas', modulo: 'facturacion' },
   { prefix: '/cotizaciones', modulo: 'cotizaciones' },
+  { prefix: '/calculadoras', modulo: 'calculadoras' },
   { prefix: '/catalogos/clientes', modulo: 'clientes' },
   { prefix: '/catalogos/productos', modulo: 'productos' },
   { prefix: '/api/facturas-recibidas/consolidado', modulo: 'consolidado_recibidas' },
   { prefix: '/facturas-recibidas/consolidado', modulo: 'consolidado_recibidas' },
   { prefix: '/facturas-recibidas', modulo: 'descargas_sat' },
   { prefix: '/configuracion', modulo: 'configuracion' },
+  
 ];
 
 export async function middleware(req: NextRequest) {
@@ -34,7 +37,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (session.rol === 'SUPERADMIN') {
+  if (roleHasAllModules(session.rol) || isRootSuperUser(session.email)) {
     return NextResponse.next();
   }
 

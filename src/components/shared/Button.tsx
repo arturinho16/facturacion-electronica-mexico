@@ -8,7 +8,7 @@ type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const variants: Record<Variant, string> = {
-  primary: 'bg-[#4F46E5] text-white hover:bg-[#4338CA]',
+  primary: 'bg-blue-600 text-white hover:bg-blue-700',
   secondary: 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50',
   success: 'bg-emerald-600 text-white hover:bg-emerald-700',
   danger: 'bg-rose-600 text-white hover:bg-rose-700',

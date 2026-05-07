@@ -3,12 +3,15 @@
 @tailwind utilities;
 
 @layer base {
+    html {
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
 
     /* ==========================================================
        1. TAMAÑO DE LETRA GENERAL DEL SISTEMA (Tablas, textos)
        ========================================================== */
     body {
-        @apply !text-[15px];
+        @apply !text-[15px] text-slate-800 antialiased;
         /* Tamaño en celulares (15px) */
     }
 
@@ -28,7 +31,7 @@
     textarea {
         /* Aquí definimos el grosor (!border-2) y el color (!border-slate-400) */
         /* La clase !text-base dicta que lo que escribas mida 16px */
-        @apply !border-2 !border-slate-400 !text-base !bg-white !shadow-sm !transition-colors !duration-200;
+        @apply !min-h-11 !rounded-xl !border-2 !border-slate-300 !bg-white !px-3 !py-2.5 !text-base !font-medium !text-slate-800 !shadow-sm !transition-colors !duration-200;
     }
 
     /* EFECTO AL HACER CLIC (Contorno Azul) */
@@ -36,6 +39,17 @@
     select:focus,
     textarea:focus {
         @apply !border-blue-600 !ring-4 !ring-blue-600/20 !outline-none;
+    }
+
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+        margin: 0;
+        -webkit-appearance: none;
+    }
+
+    input[type="number"] {
+        -moz-appearance: textfield;
+        appearance: textfield;
     }
 
     /* ==========================================================
@@ -51,5 +65,49 @@
             @apply !text-sm;
             /* Títulos a 14px en computadoras */
         }
+    }
+
+    button,
+    a {
+        @apply transition-colors;
+    }
+
+    button:not(:disabled),
+    a[href] {
+        @apply focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-600/20;
+    }
+
+    button:disabled {
+        @apply cursor-not-allowed opacity-60;
+    }
+
+    table {
+        @apply text-sm;
+    }
+
+    th {
+        @apply text-xs font-extrabold uppercase tracking-normal text-slate-500;
+    }
+
+    td {
+        @apply text-sm text-slate-700;
+    }
+}
+
+@layer components {
+    .app-card {
+        @apply rounded-xl border border-slate-200 bg-white shadow-sm;
+    }
+
+    .app-button {
+        @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-colors;
+    }
+
+    .app-button-primary {
+        @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-blue-700;
+    }
+
+    .app-button-secondary {
+        @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50;
     }
 }

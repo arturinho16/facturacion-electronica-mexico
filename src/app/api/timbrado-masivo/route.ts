@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { generarXMLNomina } from '@/app/nomina/facturacion-masiva/utils/generarXMLNomina';
 import { getNoCertificado, getCertificadoBase64, keyToPem } from '@/lib/sat/firmar';
 import * as soap from 'soap';
-import { getActiveConfig, getCsdCredentials } from '@/lib/configuracion';
+import { getActiveConfig, getCsdCredentials, registrarTimbreUsado } from '@/lib/configuracion';
 import { generarCadenaOriginal, inyectarCertificado, inyectarSello, sellarCadena } from '@/lib/nomina/sellado';
 import { armarPeriodoNomina, obtenerDatosEmpleadoNomina, obtenerDatosEmisorNomina } from '@/lib/nomina/armado';
 
@@ -145,14 +145,17 @@ export async function POST(req: Request) {
                 xmlFinal = xmlFinal.replace(/^\uFEFF/, '').trim();
 
                 // G) Persistencia en Base de Datos (ÉXITO)
-                await prisma.reciboNomina.update({
-                    where: { id: recibo.id },
-                    data: {
-                        estado: 'TIMBRADO',
-                        uuid: stampResult.UUID,
-                        xmlTimbrado: xmlFinal,
-                        mensajeError: null // Limpiamos errores previos si los hubo
-                    }
+                await prisma.$transaction(async (tx) => {
+                    await tx.reciboNomina.update({
+                        where: { id: recibo.id },
+                        data: {
+                            estado: 'TIMBRADO',
+                            uuid: stampResult.UUID,
+                            xmlTimbrado: xmlFinal,
+                            mensajeError: null // Limpiamos errores previos si los hubo
+                        }
+                    });
+                    await registrarTimbreUsado(tx);
                 });
 
                 resultados.push({

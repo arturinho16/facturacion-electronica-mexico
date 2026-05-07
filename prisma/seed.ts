@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { prisma } from '../src/lib/prisma';
+import { getDefaultModulesByRole } from '../src/lib/auth/permissions';
 
 async function main() {
     const hashedPassword = await bcrypt.hash("admin123", 12);
@@ -8,36 +9,14 @@ async function main() {
         where: { email: "admin@tufisti.com" },
         update: {
             rol: "SUPERADMIN",
-            modulos: {
-                dashboard: true,
-                nomina: true,
-                facturacion: true,
-                factura_global: true,
-                clientes: true,
-                productos: true,
-                cotizaciones: true,
-                configuracion: true,
-                descargas_sat: true,
-                consolidado_recibidas: true
-            }
+            modulos: getDefaultModulesByRole('SUPERADMIN')
         },
         create: {
             nombre: "Súper Administrador",
             email: "admin@tufisti.com",
             password: hashedPassword,
             rol: "SUPERADMIN",
-            modulos: {
-                dashboard: true,
-                nomina: true,
-                facturacion: true,
-                factura_global: true,
-                clientes: true,
-                productos: true,
-                cotizaciones: true,
-                configuracion: true,
-                descargas_sat: true,
-                consolidado_recibidas: true
-            }
+            modulos: getDefaultModulesByRole('SUPERADMIN')
         }
     });
 

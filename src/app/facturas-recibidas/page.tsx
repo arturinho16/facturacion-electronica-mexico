@@ -1138,7 +1138,7 @@ export default function FacturasRecibidasPage() {
 
         try {
             const facturaParseada = parseXmlToFactura(f.xmlContenido);
-            const doc = <FacturaPDF factura={facturaParseada} />;
+            const doc = <FacturaPDF factura={facturaParseada} /> as Parameters<typeof pdf>[0];
             const asPdf = pdf(doc);
             const blob = await asPdf.toBlob();
             saveAs(blob, `${f.emisorRfc}_${f.uuid}.pdf`);
@@ -1174,7 +1174,8 @@ export default function FacturasRecibidasPage() {
             if (!factura.xmlContenido) continue;
 
             const facturaParseada = parseXmlToFactura(factura.xmlContenido);
-            const blob = await pdf(<FacturaPDF factura={facturaParseada} />).toBlob();
+            const doc = <FacturaPDF factura={facturaParseada} /> as Parameters<typeof pdf>[0];
+            const blob = await pdf(doc).toBlob();
             const singlePdf = await PDFDocument.load(await blob.arrayBuffer());
             const copiedPages = await mergedPdf.copyPages(singlePdf, singlePdf.getPageIndices());
             copiedPages.forEach((page) => mergedPdf.addPage(page));
@@ -1185,7 +1186,9 @@ export default function FacturasRecibidasPage() {
             throw new Error('No hay XML disponibles para generar PDF.');
         }
 
-        return new Blob([await mergedPdf.save()], { type: 'application/pdf' });
+        const pdfBytes = await mergedPdf.save();
+        const pdfBuffer = pdfBytes.buffer.slice(pdfBytes.byteOffset, pdfBytes.byteOffset + pdfBytes.byteLength) as ArrayBuffer;
+        return new Blob([pdfBuffer], { type: 'application/pdf' });
     };
 
     const blobToBase64 = (blob: Blob) =>

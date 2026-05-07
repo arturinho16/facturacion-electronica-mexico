@@ -475,6 +475,9 @@ model ConfiguracionFiscal {
   representanteLegal String?
   registroPatronal   String?
 
+  // Apariencia del sistema
+  aparienciaHeaderColor String @default("#2563eb")
+
   // Certificados y PAC
   csdNoCertificado       String?
   csdCertificadoBase64   String?   @db.Text

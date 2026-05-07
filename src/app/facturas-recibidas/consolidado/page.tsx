@@ -180,14 +180,17 @@ async function crearPdfUnido(facturas: FacturaConsolidado[]) {
     let agregadas = 0;
     for (const factura of facturas) {
         if (!factura.xmlContenido) continue;
-        const blob = await pdf(<FacturaPDF factura={parseXmlParaPdf(factura.xmlContenido)} />).toBlob();
+        const doc = <FacturaPDF factura={parseXmlParaPdf(factura.xmlContenido)} /> as Parameters<typeof pdf>[0];
+        const blob = await pdf(doc).toBlob();
         const singlePdf = await PDFDocument.load(await blob.arrayBuffer());
         const pages = await mergedPdf.copyPages(singlePdf, singlePdf.getPageIndices());
         pages.forEach((page) => mergedPdf.addPage(page));
         agregadas++;
     }
     if (agregadas === 0) throw new Error('No hay XML disponibles para generar PDF.');
-    return new Blob([await mergedPdf.save()], { type: 'application/pdf' });
+    const pdfBytes = await mergedPdf.save();
+    const pdfBuffer = pdfBytes.buffer.slice(pdfBytes.byteOffset, pdfBytes.byteOffset + pdfBytes.byteLength) as ArrayBuffer;
+    return new Blob([pdfBuffer], { type: 'application/pdf' });
 }
 
 export default function ConsolidadoFacturasRecibidasPage() {

@@ -10,5 +10,6 @@ export async function GET() {
   return NextResponse.json({
     nombreComercial: config?.nombreComercial || config?.razonSocial || 'TuFisTi Autofacturador',
     logoUrl: config?.logoUrl || '',
+    aparienciaHeaderColor: config?.aparienciaHeaderColor || '#2563eb',
   });
 }

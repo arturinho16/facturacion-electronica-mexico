@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   Users, Package, FileText, BarChart3, PlusCircle, Receipt,
   FileCheck, Menu, X, Globe, Calendar, PieChart as PieChartIcon,
-  TrendingUp, LayoutPanelLeft, LogOut, Archive, Settings, Inbox
+  TrendingUp, LayoutPanelLeft, LogOut, Archive, Settings, Inbox, Calculator
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
@@ -29,6 +29,21 @@ interface DatosDiarios {
   cantidad: number;
 }
 
+interface FacturaDashboard {
+  estado?: string;
+  total?: string | number;
+  fecha?: string;
+  client?: {
+    nombreRazonSocial?: string;
+  };
+}
+
+interface DatosEstado {
+  name: string;
+  cantidad: number;
+  fill: string;
+}
+
 const MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
@@ -40,6 +55,39 @@ const COLORES_ESTADO = {
   Canceladas: '#dc2626'  // Rojo
 };
 
+const NAV_ITEMS = [
+  { href: '/', label: 'Panel', Icon: BarChart3 },
+  { href: '/facturas/nueva', label: 'Nueva Factura', Icon: PlusCircle },
+  { href: '/facturas', label: 'Facturas', Icon: Receipt },
+  { href: '/facturas/global', label: 'Factura Global', Icon: Globe },
+  { href: '/facturas/consolidado', label: 'Consolidado Mensual', Icon: Archive },
+  { href: '/catalogos/clientes', label: 'Clientes', Icon: Users },
+  { href: '/catalogos/productos', label: 'Productos', Icon: Package },
+  { href: '/cotizaciones', label: 'Cotizaciones', Icon: FileCheck },
+  { href: '/calculadoras', label: 'Calculadoras', Icon: Calculator },
+  { href: '/empleados', label: 'Empleados', Icon: Users },
+  { href: '/nomina/facturacion-masiva', label: 'Nómina Masiva', Icon: FileText },
+  { href: '/facturas-recibidas', label: 'Facturas Recibidas', Icon: Inbox },
+  { href: '/facturas-recibidas/consolidado', label: 'Consolidado Recibidas', Icon: Archive },
+  { href: '/configuracion', label: 'Configuración', Icon: Settings },
+] as const;
+
+const MODULE_CARDS = [
+  { href: '/catalogos/clientes', title: 'Clientes', description: 'Sube la CIF de tus clientes', Icon: Users, color: 'border-l-emerald-500 bg-emerald-50 text-emerald-600' },
+  { href: '/catalogos/productos', title: 'Productos', description: 'Productos y servicios a facturar', Icon: Package, color: 'border-l-violet-500 bg-violet-50 text-violet-600' },
+  { href: '/facturas/nueva', title: 'Nueva Factura', description: 'Generar CFDI 4.0 al instante.', Icon: FileText, color: 'border-l-sky-500 bg-sky-50 text-sky-600' },
+  { href: '/facturas', title: 'Facturas Emitidas', description: 'Historial, descarga y envío por correo.', Icon: Receipt, color: 'border-l-amber-500 bg-amber-50 text-amber-600' },
+  { href: '/facturas/global', title: 'Factura Global', description: 'Ventas al público en general.', Icon: Globe, color: 'border-l-indigo-500 bg-indigo-50 text-indigo-600' },
+  { href: '/facturas/consolidado', title: 'Consolidado Mensual', description: 'Cierre contable y ZIP de XMLs.', Icon: Archive, color: 'border-l-cyan-500 bg-cyan-50 text-cyan-600' },
+  { href: '/cotizaciones', title: 'Cotizaciones', description: 'Cotizaciones a clientes.', Icon: FileCheck, color: 'border-l-slate-500 bg-slate-100 text-slate-700' },
+  { href: '/calculadoras', title: 'Calculadoras', description: 'ISR, IVA, nómina y cálculos laborales.', Icon: Calculator, color: 'border-l-blue-500 bg-blue-50 text-blue-600' },
+  { href: '/empleados', title: 'Empleados', description: 'Gestión de empleados a timbrar.', Icon: Users, color: 'border-l-orange-500 bg-orange-50 text-orange-600' },
+  { href: '/nomina/facturacion-masiva', title: 'Nómina Masiva', description: 'Timbrado de recibos en lote.', Icon: FileText, color: 'border-l-teal-500 bg-teal-50 text-teal-600' },
+  { href: '/facturas-recibidas', title: 'Facturas Recibidas', description: 'Descarga de facturas del SAT.', Icon: Inbox, color: 'border-l-pink-500 bg-pink-50 text-pink-600' },
+  { href: '/facturas-recibidas/consolidado', title: 'Consolidado Recibidas', description: 'Visualización y descargas por RFC.', Icon: Archive, color: 'border-l-rose-500 bg-rose-50 text-rose-600' },
+  { href: '/configuracion', title: 'Configuración', description: 'Perfil fiscal, usuarios y apariencia.', Icon: Settings, color: 'border-l-slate-800 bg-slate-100 text-slate-700' },
+] as const;
+
 export default function DashboardPage() {
   const router = useRouter();
 
@@ -50,6 +98,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [logoUrl, setLogoUrl] = useState('');
   const [empresaNombre, setEmpresaNombre] = useState('');
+  const [headerColor, setHeaderColor] = useState('#2563eb');
 
   // Controles del Dashboard
   const [mesSeleccionado, setMesSeleccionado] = useState(new Date().getMonth());
@@ -65,7 +114,7 @@ export default function DashboardPage() {
     topCliente: '-',
   });
 
-  const [datosEstado, setDatosEstado] = useState<any[]>([]);
+  const [datosEstado, setDatosEstado] = useState<DatosEstado[]>([]);
   const [datosDiarios, setDatosDiarios] = useState<DatosDiarios[]>([]);
 
   useEffect(() => {
@@ -76,19 +125,19 @@ export default function DashboardPage() {
         const hasta = new Date(anioActual, mesSeleccionado + 1, 0, 23, 59, 59).toISOString();
 
         const res = await fetch(`/api/facturas?desde=${desde}&hasta=${hasta}`);
-        const facturas = await res.json();
+        const facturas: FacturaDashboard[] = await res.json();
 
         // Clasificación de estados
-        const timbradas = facturas.filter((f: any) => f.estado === 'TIMBRADO' || f.estado === 'ENVIADA');
-        const noTimbradas = facturas.filter((f: any) => f.estado === 'BORRADOR');
-        const canceladas = facturas.filter((f: any) => f.estado === 'CANCELADO' || f.estado === 'CANCELADA');
+        const timbradas = facturas.filter((f) => f.estado === 'TIMBRADO' || f.estado === 'ENVIADA');
+        const noTimbradas = facturas.filter((f) => f.estado === 'BORRADOR');
+        const canceladas = facturas.filter((f) => f.estado === 'CANCELADO' || f.estado === 'CANCELADA');
 
         // Dinero Total Timbrado
-        const dineroTimbrado = timbradas.reduce((sum: number, f: any) => sum + parseFloat(f.total || '0'), 0);
+        const dineroTimbrado = timbradas.reduce((sum, f) => sum + parseFloat(String(f.total || '0')), 0);
 
         // Cliente con más facturas válidas
         const conteoClientes: Record<string, number> = {};
-        timbradas.forEach((f: any) => {
+        timbradas.forEach((f) => {
           const nombre = f.client?.nombreRazonSocial || 'Desconocido';
           conteoClientes[nombre] = (conteoClientes[nombre] || 0) + 1;
         });
@@ -125,10 +174,10 @@ export default function DashboardPage() {
           cantidad: 0
         }));
 
-        timbradas.forEach((f: any) => {
-          const dia = new Date(f.fecha).getDate();
+        timbradas.forEach((f) => {
+          const dia = new Date(f.fecha || '').getDate();
           if (diario[dia - 1]) {
-            diario[dia - 1].monto += parseFloat(f.total || '0');
+            diario[dia - 1].monto += parseFloat(String(f.total || '0'));
             diario[dia - 1].cantidad += 1;
           }
         });
@@ -146,7 +195,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function cargarLogo() {
-      const res = await fetch('/api/configuracion', { cache: 'no-store' }).catch(() => null);
+      const res = await fetch('/api/public/branding', { cache: 'no-store' }).catch(() => null);
       if (!res?.ok) {
         setLogoUrl('');
         setEmpresaNombre('');
@@ -154,7 +203,8 @@ export default function DashboardPage() {
       }
       const config = await res.json().catch(() => ({}));
       setLogoUrl(config.logoUrl || '');
-      setEmpresaNombre(config.nombreComercial || config.razonSocial || '');
+      setEmpresaNombre(config.nombreComercial || '');
+      setHeaderColor(/^#[0-9A-Fa-f]{6}$/.test(String(config.aparienciaHeaderColor || '')) ? config.aparienciaHeaderColor : '#2563eb');
     }
 
     cargarLogo();
@@ -183,24 +233,24 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800">
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <header className="bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-600 shadow-lg">
+      <header className="shadow-lg" style={{ backgroundColor: headerColor }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-white shadow-md flex-shrink-0 flex items-center justify-center">
               {logoUrl ? (
                 <img src={logoUrl} alt="Logo de la empresa" className="h-full w-full object-contain p-1" />
               ) : (
-                <Settings className="w-5 h-5 sm:w-6 sm:h-6 text-blue-700" />
+                <Settings className="w-5 h-5 sm:w-6 sm:h-6 text-slate-700" />
               )}
             </div>
             <div>
               <h1 className="text-white font-bold text-lg sm:text-xl leading-tight">{empresaNombre || 'Configura tu empresa'}</h1>
-              <p className="text-blue-200 text-xs hidden sm:block">Sistema de Autofacturación CFDI 4.0</p>
+              <p className="text-white/75 text-xs hidden sm:block">Sistema de Autofacturación CFDI 4.0</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <Link href="/facturas/nueva" className="hidden sm:flex items-center gap-2 bg-white text-blue-700 font-bold px-4 py-2.5 rounded-xl hover:bg-blue-50 transition-all text-sm shadow">
+            <Link href="/facturas/nueva" className="hidden sm:flex items-center gap-2 bg-white text-slate-800 font-bold px-4 py-2.5 rounded-xl hover:bg-slate-50 transition-all text-sm shadow">
               <PlusCircle className="w-4 h-4" /> Nueva Factura
             </Link>
             <button
@@ -216,58 +266,37 @@ export default function DashboardPage() {
         </div>
 
         {/* ── Nav desktop ── */}
-        <div className="hidden sm:block border-t border-blue-500/40">
+        <div className="hidden border-t border-white/20 sm:block lg:hidden">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 flex overflow-x-auto">
-            <Link href="/" className="flex items-center gap-1.5 px-4 py-3 text-white bg-white/20 border-b-2 border-white text-sm font-bold whitespace-nowrap">
-              <BarChart3 className="w-4 h-4" /> Panel
-            </Link>
-            <Link href="/facturas" className="flex items-center gap-1.5 px-4 py-3 text-blue-100 hover:text-white hover:bg-white/10 text-sm font-medium transition-colors whitespace-nowrap">
-              <Receipt className="w-4 h-4" /> Facturas
-            </Link>
-            <Link href="/catalogos/clientes" className="flex items-center gap-1.5 px-4 py-3 text-blue-100 hover:text-white hover:bg-white/10 text-sm font-medium transition-colors whitespace-nowrap">
-              <Users className="w-4 h-4" /> Clientes
-            </Link>
-            <Link href="/catalogos/productos" className="flex items-center gap-1.5 px-4 py-3 text-blue-100 hover:text-white hover:bg-white/10 text-sm font-medium transition-colors whitespace-nowrap">
-              <Package className="w-4 h-4" /> Productos
-            </Link>
-            <Link href="/cotizaciones" className="flex items-center gap-1.5 px-4 py-3 text-blue-100 hover:text-white hover:bg-white/10 text-sm font-medium transition-colors whitespace-nowrap">
-              <FileCheck className="w-4 h-4" /> Cotizaciones
-            </Link>
+            {NAV_ITEMS.map(({ href, label, Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                className={`flex items-center gap-1.5 px-4 py-3 text-sm transition-colors whitespace-nowrap ${href === '/' ? 'text-white bg-white/20 border-b-2 border-white font-bold' : 'text-white/80 hover:text-white hover:bg-white/10 font-medium'}`}
+              >
+                <Icon className="w-4 h-4" /> {label}
+              </Link>
+            ))}
           </div>
         </div>
 
         {/* ── Nav móvil (hamburguesa) ── */}
         {menuOpen && (
-          <div className="sm:hidden border-t border-blue-500/40 bg-blue-700">
-            <nav className="flex flex-col">
-              <Link href="/" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-5 py-4 text-white bg-white/20 font-bold border-b border-blue-500/30">
-                <BarChart3 className="w-5 h-5" /> Panel
-              </Link>
-              <Link href="/facturas/nueva" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-5 py-4 text-blue-100 hover:bg-white/10 font-medium border-b border-blue-500/30">
-                <PlusCircle className="w-5 h-5" /> Nueva Factura
-              </Link>
-              <Link href="/facturas" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-5 py-4 text-blue-100 hover:bg-white/10 font-medium border-b border-blue-500/30">
-                <Receipt className="w-5 h-5" /> Facturas
-              </Link>
-              <Link href="/catalogos/clientes" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-5 py-4 text-blue-100 hover:bg-white/10 font-medium border-b border-blue-500/30">
-                <Users className="w-5 h-5" /> Clientes
-              </Link>
-              <Link href="/catalogos/productos" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-5 py-4 text-blue-100 hover:bg-white/10 font-medium border-b border-blue-500/30">
-                <Package className="w-5 h-5" /> Productos
-              </Link>
-              <Link href="/cotizaciones" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-5 py-4 text-blue-100 hover:bg-white/10 font-medium border-b border-blue-500/30">
-                <FileCheck className="w-5 h-5" /> Cotizaciones
-              </Link>
-              {/* NUEVOS ENLACES DE NÓMINA MÓVIL */}
-              <Link href="/empleados" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-5 py-4 text-blue-100 hover:bg-white/10 font-medium border-b border-blue-500/30">
-                <Users className="w-5 h-5" /> Empleados
-              </Link>
-              <Link href="/nomina/facturacion-masiva" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-5 py-4 text-blue-100 hover:bg-white/10 font-medium border-b border-blue-500/30">
-                <FileText className="w-5 h-5" /> Nómina Masiva
-              </Link>
+          <div className="sm:hidden border-t border-white/20">
+            <nav className="grid grid-cols-1 max-h-[70vh] overflow-y-auto">
+              {NAV_ITEMS.map(({ href, label, Icon }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={() => setMenuOpen(false)}
+                  className={`flex items-center gap-3 px-5 py-4 border-b border-white/10 ${href === '/' ? 'text-white bg-white/20 font-bold' : 'text-white/85 hover:bg-white/10 font-medium'}`}
+                >
+                  <Icon className="w-5 h-5 shrink-0" /> {label}
+                </Link>
+              ))}
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-3 px-5 py-4 text-red-300 hover:bg-white/10 font-medium border-b border-blue-500/30 text-left w-full"
+                className="flex items-center gap-3 px-5 py-4 text-red-200 hover:bg-white/10 font-medium border-b border-white/10 text-left w-full"
               >
                 <LogOut className="w-5 h-5" /> Cerrar Sesión
               </button>
@@ -280,105 +309,27 @@ export default function DashboardPage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8 pb-24">
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-800">Panel de Control</h2>
-          <p className="text-slate-500 mt-1 text-sm">Bienvenido al sistema de autofacturación México.</p>
+          <p className="text-slate-500 mt-1 text-sm">Bienvenido al sistema mas completo de Autofacturación en México.</p>
         </div>
 
         {/* ── Accesos Rápidos ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Link href="/facturas/nueva" className="bg-gradient-to-br from-blue-600 to-blue-700 p-5 sm:p-6 rounded-2xl shadow-lg shadow-blue-200 text-white hover:from-blue-700 hover:to-blue-800 transition-all group">
-            <div className="flex justify-between items-start mb-4">
-              <div className="bg-white/20 p-2.5 rounded-xl"><FileText className="w-6 h-6 sm:w-8 sm:h-8" /></div>
-              <PlusCircle className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-            <h3 className="text-lg sm:text-xl font-bold">Nueva Factura</h3>
-            <p className="text-blue-100 text-xs sm:text-sm mt-1">Generar CFDI 4.0 al instante.</p>
-          </Link>
-
-          <Link href="/catalogos/clientes" className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border-l-4 border-l-emerald-500 border border-slate-200 hover:shadow-md transition-all">
-            <div className="mb-4"><div className="bg-emerald-50 p-2.5 rounded-xl inline-block"><Users className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600" /></div></div>
-            <h3 className="text-lg sm:text-xl font-bold text-slate-800">Clientes</h3>
-            <p className="text-slate-500 text-xs sm:text-sm mt-1">Gestionar catálogo de receptores.</p>
-          </Link>
-
-          <Link href="/catalogos/productos" className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border-l-4 border-l-violet-500 border border-slate-200 hover:shadow-md transition-all">
-            <div className="mb-4"><div className="bg-violet-50 p-2.5 rounded-xl inline-block"><Package className="w-6 h-6 sm:w-8 sm:h-8 text-violet-600" /></div></div>
-            <h3 className="text-lg sm:text-xl font-bold text-slate-800">Productos</h3>
-            <p className="text-slate-500 text-xs sm:text-sm mt-1">Servicios y conceptos de facturación.</p>
-          </Link>
-
-          <Link href="/facturas" className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border-l-4 border-l-amber-500 border border-slate-200 hover:shadow-md transition-all">
-            <div className="mb-4"><div className="bg-amber-50 p-2.5 rounded-xl inline-block"><Receipt className="w-6 h-6 sm:w-8 sm:h-8 text-amber-600" /></div></div>
-            <h3 className="text-lg sm:text-xl font-bold text-slate-800">Facturas</h3>
-            <p className="text-slate-500 text-xs sm:text-sm mt-1">Historial, descarga y envío por correo.</p>
-          </Link>
-
-          <Link href="/cotizaciones" className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border-l-4 border-l-slate-400 border border-slate-200 hover:shadow-md transition-all group">
-            <div className="mb-4"><div className="bg-slate-50 p-2.5 rounded-xl inline-block"><FileCheck className="w-6 h-6 sm:w-8 sm:h-8 text-slate-600" /></div></div>
-            <h3 className="text-lg sm:text-xl font-bold text-slate-800">Cotizaciones</h3>
-            <p className="text-slate-500 text-xs sm:text-sm mt-1">Gestionar y convertir a facturas.</p>
-          </Link>
-
-          <Link href="/empleados" className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border-l-4 border-l-slate-400 border border-slate-200 hover:shadow-md transition-all group">
-            <div className="mb-4"><div className="bg-slate-50 p-2.5 rounded-xl inline-block"><FileCheck className="w-6 h-6 sm:w-8 sm:h-8 text-slate-600" /></div></div>
-            <h3 className="text-lg sm:text-xl font-bold text-slate-800">Empleados</h3>
-            <p className="text-slate-500 text-xs sm:text-sm mt-1">Gestion de empleados.</p>
-          </Link>
-
-          <Link href="/nomina/facturacion-masiva" className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border-l-4 border-l-slate-400 border border-slate-200 hover:shadow-md transition-all group">
-            <div className="mb-4"><div className="bg-slate-50 p-2.5 rounded-xl inline-block"><FileCheck className="w-6 h-6 sm:w-8 sm:h-8 text-slate-600" /></div></div>
-            <h3 className="text-lg sm:text-xl font-bold text-slate-800">Nomina masiva</h3>
-            <p className="text-slate-500 text-xs sm:text-sm mt-1">Timbrado de recibos de nómina en lote.</p>
-          </Link>
-
-
-          <Link href="/facturas/global" className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border-l-4 border-l-indigo-500 border border-slate-200 hover:shadow-md transition-all group">
-            <div className="mb-4">
-              <div className="bg-indigo-50 p-2.5 rounded-xl inline-block">
-                <Globe className="w-6 h-6 sm:w-8 sm:h-8 text-indigo-600" />
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
+          {MODULE_CARDS.map(({ href, title, description, Icon, color }) => (
+            <Link
+              key={href}
+              href={href}
+              className={`group min-h-[142px] rounded-xl border border-slate-200 border-l-4 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-md sm:min-h-[168px] sm:p-5 ${color}`}
+            >
+              <div className="mb-3 flex items-start justify-between gap-2">
+                <div className="inline-flex rounded-xl bg-inherit p-2.5 shadow-sm">
+                  <Icon className="h-5 w-5 sm:h-7 sm:w-7" />
+                </div>
+                <PlusCircle className="h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100" />
               </div>
-            </div>
-            <h3 className="text-lg sm:text-xl font-bold text-slate-800">Factura Global</h3>
-            <p className="text-slate-500 text-sm mt-1">Ventas al público en general del periodo.</p>
-          </Link>
-          <Link href="/facturas/consolidado" className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border-l-4 border-l-cyan-500 border border-slate-200 hover:shadow-md transition-all group">
-            <div className="mb-4">
-              <div className="bg-cyan-50 p-2.5 rounded-xl inline-block">
-                <Archive className="w-6 h-6 sm:w-8 sm:h-8 text-cyan-600" />
-              </div>
-            </div>
-            <h3 className="text-lg sm:text-xl font-bold text-slate-800">Consolidado Mensual</h3>
-            <p className="text-slate-500 text-sm mt-1">Cierre contable: Descarga 1 PDF global y ZIP de XMLs.</p>
-          </Link>
-
-          <Link href="/facturas-recibidas" className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border-l-4 border-l-pink-500 border border-slate-200 hover:shadow-md transition-all group">
-            <div className="mb-4">
-              <div className="bg-pink-50 p-2.5 rounded-xl inline-block">
-                <Inbox className="w-6 h-6 sm:w-8 sm:h-8 text-pink-600" />
-              </div>
-            </div>
-
-            <h3 className="text-lg sm:text-xl font-bold text-slate-800">Facturas Recibidas</h3>
-            <p className="text-slate-500 text-sm mt-1">Gastos sincronizados desde el SAT.</p>
-          </Link>
-          <Link href="/facturas-recibidas/consolidado" className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border-l-4 border-l-rose-500 border border-slate-200 hover:shadow-md transition-all group">
-            <div className="mb-4">
-              <div className="bg-rose-50 p-2.5 rounded-xl inline-block">
-                <Archive className="w-6 h-6 sm:w-8 sm:h-8 text-rose-600" />
-              </div>
-            </div>
-            <h3 className="text-lg sm:text-xl font-bold text-slate-800">Consolidado Recibidas</h3>
-            <p className="text-slate-500 text-sm mt-1">Todos los RFC receptores y submódulos.</p>
-          </Link>
-          <Link href="/configuracion" className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border-l-4 border-l-slate-800 border border-slate-200 hover:shadow-md transition-all group">
-            <div className="mb-4">
-              <div className="bg-slate-100 p-2.5 rounded-xl inline-block">
-                <Settings className="w-6 h-6 sm:w-8 sm:h-8 text-slate-700" />
-              </div>
-            </div>
-            <h3 className="text-lg sm:text-xl font-bold text-slate-800">Configuración</h3>
-            <p className="text-slate-500 text-sm mt-1">Perfil fiscal, usuarios y certificados SAT.</p>
-          </Link>
-
+              <h3 className="text-sm font-bold leading-snug text-slate-800 sm:text-lg">{title}</h3>
+              <p className="mt-1 text-xs leading-relaxed text-slate-500 sm:text-sm">{description}</p>
+            </Link>
+          ))}
         </div>
 
         {/* ── Resumen Mensual con Filtro ── */}
@@ -504,7 +455,7 @@ export default function DashboardPage() {
                           tickFormatter={(value) => `$${value}`}
                         />
                         <RechartsTooltip
-                          formatter={(value: number) => [formatMXN(value), 'Monto Timbrado']}
+                          formatter={(value) => [formatMXN(Number(value || 0)), 'Monto Timbrado']}
                           labelFormatter={(label) => `Día ${label} de ${MESES[mesSeleccionado]}`}
                           contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                         />

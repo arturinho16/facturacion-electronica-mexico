@@ -613,12 +613,11 @@ function ModalVistaPrevia({
 
       const facturaData = buildFacturaDataPDF(factura, emisor);
 
-      const blob = await pdf(
-        React.createElement(FacturaPDF, {
-          factura: facturaData,
-          logoUrl: await getEmpresaLogoUrl(),
-        })
-      ).toBlob();
+      const facturaDoc = React.createElement(FacturaPDF, {
+        factura: facturaData,
+        logoUrl: await getEmpresaLogoUrl(),
+      }) as Parameters<typeof pdf>[0];
+      const blob = await pdf(facturaDoc).toBlob();
 
       const reader = new FileReader();
       reader.readAsDataURL(blob);
@@ -1057,12 +1056,11 @@ function NuevaFacturaForm() {
 
       const facturaData = buildFacturaDataPDF(facturaGuardada, emisorConfig);
 
-      const blob = await pdf(
-        React.createElement(FacturaPDF, {
-          factura: facturaData,
-          logoUrl: await getEmpresaLogoUrl(),
-        })
-      ).toBlob();
+      const facturaDoc = React.createElement(FacturaPDF, {
+        factura: facturaData,
+        logoUrl: await getEmpresaLogoUrl(),
+      }) as Parameters<typeof pdf>[0];
+      const blob = await pdf(facturaDoc).toBlob();
 
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

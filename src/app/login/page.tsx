@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import { Building2 } from 'lucide-react';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const search = useSearchParams();
   const next = search.get('next') || '/';
@@ -49,6 +50,9 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
       <form onSubmit={onSubmit} className="w-full max-w-md space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col items-center text-center">
+          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <Image src="/favicon/android-chrome-192x192.png" alt="TuFisTi" width={42} height={42} priority />
+          </div>
           <p className="mb-3 text-sm font-bold uppercase text-slate-500">{branding.nombreComercial}</p>
           <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
             {branding.logoUrl ? (
@@ -65,8 +69,16 @@ export default function LoginPage() {
         <button disabled={loading} className="w-full rounded-xl bg-blue-600 py-3 text-sm font-bold text-white transition hover:bg-blue-700 disabled:opacity-60">
           {loading ? 'Entrando...' : 'Iniciar sesión'}
         </button>
-        <p className="text-center text-xs text-slate-500">Primer acceso: admin@tufisti.com / admin123</p>
+        <p className="text-center text-xs text-slate-500">Todos los derechos reservados &copy; {new Date().getFullYear()} TufisTi</p>
       </form>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<main className="flex min-h-screen items-center justify-center bg-slate-50 p-4" />}>
+      <LoginForm />
+    </Suspense>
   );
 }

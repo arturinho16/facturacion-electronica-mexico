@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
 import * as forge from 'node-forge';
 import { prisma } from '@/lib/prisma';
-import type { ConfiguracionFiscal } from '@prisma/client';
+import type { ConfiguracionFiscal, Prisma, PrismaClient } from '@prisma/client';
 
 
 type CertKind = 'CSD' | 'FIEL';
@@ -69,6 +69,26 @@ export async function getActiveConfig() {
   });
 }
 
+type TimbreDb = PrismaClient | Prisma.TransactionClient;
+
+export async function registrarTimbreUsado(db: TimbreDb = prisma) {
+  const config = await db.configuracionFiscal.findFirst({
+    where: { activo: true },
+    select: { id: true },
+    orderBy: { updatedAt: 'desc' },
+  });
+  if (!config) return;
+
+  await db.$executeRaw`
+    UPDATE "ConfiguracionFiscal"
+    SET
+      "timbresUsados" = "timbresUsados" + 1,
+      "timbresDisponibles" = GREATEST("timbresContratados" - ("timbresUsados" + 1), 0),
+      "updatedAt" = NOW()
+    WHERE "id" = ${config.id}
+  `;
+}
+
 export function buildConfigPayload(body: ConfigInput) {
   return {
     rfc: String(body.rfc || '').toUpperCase().trim(),
@@ -90,12 +110,16 @@ export function buildConfigPayload(body: ConfigInput) {
     registroPatronal: clean(body.registroPatronal),
     logoUrl: clean(body.logoUrl),
     logoMimeType: clean(body.logoMimeType),
+    aparienciaHeaderColor: clean(body.aparienciaHeaderColor) || '#2563eb',
     pacProveedor: clean(body.pacProveedor) || 'FINKOK',
     pacUsuario: clean(body.pacUsuario),
     pacPasswordEncrypted: clean(body.pacPassword) || clean(body.pacPasswordEncrypted),
     pacAmbiente: clean(body.pacAmbiente) || 'demo',
     pacStampUrl: clean(body.pacStampUrl),
     folioNominaSerie: clean(body.folioNominaSerie) || 'NOM',
+    timbresContratados: Math.max(0, Number(body.timbresContratados) || 0),
+    timbresUsados: Math.max(0, Number(body.timbresUsados) || 0),
+    timbresDisponibles: Math.max(0, (Number(body.timbresContratados) || 0) - (Number(body.timbresUsados) || 0)),
     correoRemitenteNombre: clean(body.correoRemitenteNombre),
     correoRemitenteEmail: clean(body.correoRemitenteEmail)?.toLowerCase() ?? null,
     correoHost: clean(body.correoHost),

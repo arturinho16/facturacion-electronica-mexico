@@ -90,7 +90,8 @@ export default function ConsolidadoPage() {
                     }
 
                     const facturaData = await buildFacturaData(f);
-                    const blob = await pdf(React.createElement(FacturaPDF, { factura: facturaData as any, logoUrl: await getEmpresaLogoUrl() })).toBlob();
+                    const facturaDoc = React.createElement(FacturaPDF, { factura: facturaData as any, logoUrl: await getEmpresaLogoUrl() }) as Parameters<typeof pdf>[0];
+                    const blob = await pdf(facturaDoc).toBlob();
 
                     const arrayBuffer = await blob.arrayBuffer();
                     const singlePdf = await PDFDocument.load(arrayBuffer);
@@ -104,13 +105,14 @@ export default function ConsolidadoPage() {
             setProgreso({ actual: total, total, etapa: 'Empaquetando archivos finales...' });
 
             const mergedPdfBytes = await mergedPdf.save();
+            const mergedPdfBuffer = mergedPdfBytes.buffer.slice(mergedPdfBytes.byteOffset, mergedPdfBytes.byteOffset + mergedPdfBytes.byteLength) as ArrayBuffer;
             const zipBlob = await zip.generateAsync({ type: 'blob' });
 
             const fileNamePdf = `Consolidado_PDFs_${MESES[mes]}_${anio}.pdf`;
             const fileNameZip = `Consolidado_XMLs_${MESES[mes]}_${anio}.zip`;
 
             if (modo === 'descarga') {
-                saveAs(new Blob([mergedPdfBytes], { type: 'application/pdf' }), fileNamePdf);
+                saveAs(new Blob([mergedPdfBuffer], { type: 'application/pdf' }), fileNamePdf);
                 saveAs(zipBlob, fileNameZip);
                 setCompletado(true);
             } else {
