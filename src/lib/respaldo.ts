@@ -18,6 +18,7 @@ export type BackupModelName =
   | 'factura'
   | 'conceptoCotizacion'
   | 'conceptoFactura'
+  | 'perfilDescargaSat'
   | 'facturaRecibida'
   | 'solicitudSat'
   | 'empleado'
@@ -51,6 +52,7 @@ export const BACKUP_MODEL_ORDER: BackupModelName[] = [
   'factura',
   'conceptoCotizacion',
   'conceptoFactura',
+  'perfilDescargaSat',
   'facturaRecibida',
   'solicitudSat',
   'empleado',
@@ -94,6 +96,10 @@ export function validarRespaldoSistema(value: unknown): asserts value is SystemB
   if (!backup.data || typeof backup.data !== 'object') throw new Error('El respaldo no contiene datos.');
 
   for (const model of BACKUP_MODEL_ORDER) {
+    if (model === 'perfilDescargaSat' && (backup.data as Record<string, unknown>)[model] === undefined) {
+      continue;
+    }
+
     if (!Array.isArray((backup.data as Record<string, unknown>)[model])) {
       throw new Error(`El respaldo no contiene la tabla requerida: ${model}`);
     }
@@ -109,7 +115,7 @@ export async function restaurarRespaldoSistema(backup: SystemBackup) {
     }
 
     for (const model of BACKUP_MODEL_ORDER) {
-      const rows = backup.data[model];
+      const rows = backup.data[model] || [];
       if (rows.length) {
         await getDelegate(model, tx).createMany({ data: rows });
       }

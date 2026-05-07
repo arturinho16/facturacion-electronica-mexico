@@ -360,6 +360,15 @@ export default function DashboardPage() {
             <h3 className="text-lg sm:text-xl font-bold text-slate-800">Facturas Recibidas</h3>
             <p className="text-slate-500 text-sm mt-1">Gastos sincronizados desde el SAT.</p>
           </Link>
+          <Link href="/facturas-recibidas/consolidado" className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border-l-4 border-l-rose-500 border border-slate-200 hover:shadow-md transition-all group">
+            <div className="mb-4">
+              <div className="bg-rose-50 p-2.5 rounded-xl inline-block">
+                <Archive className="w-6 h-6 sm:w-8 sm:h-8 text-rose-600" />
+              </div>
+            </div>
+            <h3 className="text-lg sm:text-xl font-bold text-slate-800">Consolidado Recibidas</h3>
+            <p className="text-slate-500 text-sm mt-1">Todos los RFC receptores y submódulos.</p>
+          </Link>
           <Link href="/configuracion" className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border-l-4 border-l-slate-800 border border-slate-200 hover:shadow-md transition-all group">
             <div className="mb-4">
               <div className="bg-slate-100 p-2.5 rounded-xl inline-block">

@@ -12,7 +12,56 @@ const globalForFacturasRecibidasCron = globalThis as typeof globalThis & {
     };
 };
 
-async function hasSolicitudesPendientes() {
+function fechaClaveMx(date = new Date()) {
+    return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Mexico_City',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).format(date);
+}
+
+function inicioHoyMxUtc() {
+    return new Date(`${fechaClaveMx()}T06:00:00.000Z`);
+}
+
+async function getSolicitudesCronState() {
+    const inicioHoy = inicioHoyMxUtc();
+
+    const [verificables, reintentosManana] = await Promise.all([
+        prisma.solicitudSat.count({
+            where: {
+                OR: [
+                    { estado: { in: ['PENDIENTE', 'EN_PROCESO'] } },
+                    { estado: 'REINTENTO_MANANA', updatedAt: { lt: inicioHoy } },
+                ],
+            },
+        }),
+        prisma.solicitudSat.count({
+            where: {
+                estado: 'REINTENTO_MANANA',
+                updatedAt: { gte: inicioHoy },
+            },
+        }),
+    ]);
+
+    return {
+        verificables,
+        reintentosManana,
+    };
+}
+
+function stopCronInterval() {
+    const state = globalForFacturasRecibidasCron.__FACTURAS_RECIBIDAS_CRON__;
+
+    if (state?.intervalId) {
+        clearInterval(state.intervalId);
+    }
+
+    globalForFacturasRecibidasCron.__FACTURAS_RECIBIDAS_CRON__ = undefined;
+}
+
+async function hasAnyCronWork() {
     const total = await prisma.solicitudSat.count({
         where: {
             estado: {
@@ -32,7 +81,14 @@ async function runVerificacionBackground() {
     state.lastRunAt = Date.now();
 
     try {
-        if (!(await hasSolicitudesPendientes())) return;
+        const solicitudes = await getSolicitudesCronState();
+
+        if (solicitudes.verificables === 0) {
+            if (solicitudes.reintentosManana === 0) {
+                stopCronInterval();
+            }
+            return;
+        }
 
         const response = await verificarFacturasRecibidas();
         const data = await response.json().catch(() => null);
@@ -74,11 +130,11 @@ export function startFacturasRecibidasCron() {
 }
 
 export function stopFacturasRecibidasCron() {
-    const state = globalForFacturasRecibidasCron.__FACTURAS_RECIBIDAS_CRON__;
+    stopCronInterval();
+}
 
-    if (state?.intervalId) {
-        clearInterval(state.intervalId);
+export async function stopFacturasRecibidasCronIfIdle() {
+    if (!(await hasAnyCronWork())) {
+        stopCronInterval();
     }
-
-    globalForFacturasRecibidasCron.__FACTURAS_RECIBIDAS_CRON__ = undefined;
 }

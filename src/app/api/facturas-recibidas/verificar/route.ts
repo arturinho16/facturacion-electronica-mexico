@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { DescargaMasivaSAT } from '@/lib/sat/descarga-masiva';
 import { getSatCredentialsAsBinary } from '@/lib/sat/session-store';
 import { getActiveConfig, getFielCredentialsAsBinary, getMailTransport } from '@/lib/configuracion';
+import { ensurePerfilDescargaSat, normalizarPerfilClave } from '@/lib/sat/perfiles';
 import fs from 'fs';
 import path from 'path';
 import AdmZip from 'adm-zip';
@@ -80,6 +81,18 @@ function parseXmlMetadata(xmlContenidoRaw: string) {
 
 function normalizarFecha(fechaStr?: string, fallback = new Date()) {
     if (!fechaStr) return fallback;
+    const partes = fechaStr.match(/^(\d{4})-(\d{2})-(\d{2})(?:T|\s)?(\d{2})?:?(\d{2})?:?(\d{2})?/);
+    if (partes) {
+        const [, anio, mes, dia, hora = '00', minuto = '00', segundo = '00'] = partes;
+        return new Date(Date.UTC(
+            Number(anio),
+            Number(mes) - 1,
+            Number(dia),
+            Number(hora),
+            Number(minuto),
+            Number(segundo)
+        ));
+    }
     const fecha = new Date(fechaStr);
     return Number.isNaN(fecha.getTime()) ? fallback : fecha;
 }
@@ -302,11 +315,18 @@ function guardarMetadataTxt(
     }
 }
 
-export async function GET() {
+export async function GET(req?: Request) {
     try {
-        const satSession = getSatCredentialsAsBinary() || await getFielCredentialsAsBinary();
+        const url = req ? new URL(req.url) : null;
+        const perfilParam = url?.searchParams.get('perfil');
+        const perfilFiltroClave = perfilParam ? normalizarPerfilClave(perfilParam) : null;
+        const perfilFiltro = perfilFiltroClave ? await ensurePerfilDescargaSat(perfilFiltroClave) : null;
+        const inicioHoyMxUtc = new Date(`${fechaClaveMx()}T06:00:00.000Z`);
+        const satSessionFiltro = perfilFiltroClave
+            ? getSatCredentialsAsBinary(perfilFiltroClave) || (perfilFiltroClave === 'principal' ? await getFielCredentialsAsBinary() : null)
+            : null;
 
-        if (!satSession) {
+        if (perfilFiltroClave && !satSessionFiltro) {
             return NextResponse.json(
                 { error: 'No hay una sesión SAT activa. Inicia sesión con tu .cer, .key y contraseña.' },
                 { status: 401 }
@@ -315,11 +335,27 @@ export async function GET() {
 
         const pendientes = await prisma.solicitudSat.findMany({
             where: {
-                estado: {
-                    in: ['PENDIENTE', 'EN_PROCESO', 'REINTENTO_MANANA'],
-                },
+                AND: [
+                    ...(perfilFiltro
+                        ? [
+                            {
+                                OR: [
+                                    { perfilId: perfilFiltro.id },
+                                    ...(perfilFiltroClave === 'principal' ? [{ perfilId: null }] : []),
+                                ],
+                            },
+                        ]
+                        : []),
+                    {
+                        OR: [
+                            { estado: { in: ['PENDIENTE', 'EN_PROCESO'] } },
+                            { estado: 'REINTENTO_MANANA', updatedAt: { lt: inicioHoyMxUtc } },
+                        ],
+                    },
+                ],
             },
             orderBy: { createdAt: 'asc' },
+            include: { perfil: true },
         });
 
         if (pendientes.length === 0) {
@@ -329,12 +365,12 @@ export async function GET() {
             });
         }
 
-        const almacenPath = path.join(process.cwd(), 'almacen_facturas');
-        asegurarDirectorio(almacenPath);
+        const almacenBasePath = path.join(process.cwd(), 'almacen_facturas');
+        asegurarDirectorio(almacenBasePath);
 
-        const controlDir = getControlDir(almacenPath);
+        const controlDir = getControlDir(almacenBasePath);
 
-        let tamanoActual = obtenerTamanoCarpeta(almacenPath);
+        let tamanoActual = obtenerTamanoCarpeta(almacenBasePath);
 
         if (tamanoActual >= UMBRAL_ALERTA_BYTES) {
             await prisma.solicitudSat.updateMany({
@@ -353,14 +389,9 @@ export async function GET() {
             );
         }
 
-        const satService = new DescargaMasivaSAT(
-            satSession.cerString,
-            satSession.keyString,
-            satSession.password
-        );
-
         let nuevasFacturas = 0;
-        const facturasNuevasNotificacion: FacturaNuevaNotificacion[] = [];
+        let correosAvisoEnviados = 0;
+        const erroresNotificacionCorreo: string[] = [];
         let xmlActualizadosGlobal = 0;
         let xmlSaltadosGlobal = 0;
         let paquetesMetadataGlobal = 0;
@@ -386,6 +417,28 @@ export async function GET() {
 
         for (const solicitud of pendientes) {
             try {
+                const perfilClaveSolicitud = solicitud.perfil?.clave || 'principal';
+                const perfilSolicitud = solicitud.perfil || await ensurePerfilDescargaSat(perfilClaveSolicitud);
+                const satSession = getSatCredentialsAsBinary(perfilClaveSolicitud) || (perfilClaveSolicitud === 'principal' ? await getFielCredentialsAsBinary() : null);
+
+                if (!satSession) {
+                    await prisma.solicitudSat.update({
+                        where: { id: solicitud.id },
+                        data: {
+                            estado: 'EN_PROCESO',
+                            mensajeSat: 'Solicitud en segundo plano. Abre este perfil y conecta la e.firma para continuar la verificación.',
+                        },
+                    });
+                    incrementarResumen('EN_PROCESO');
+                    continue;
+                }
+
+                const satService = new DescargaMasivaSAT(
+                    satSession.cerString,
+                    satSession.keyString,
+                    satSession.password
+                );
+
                 const resultado = await satService.verificarSolicitud(solicitud.requestId);
                 const estadoSolicitud = resultado.estadoSolicitud;
                 const mensajeSolicitud = resultado.mensaje;
@@ -415,9 +468,10 @@ export async function GET() {
                 let paquetesMetadataSolicitud = 0;
                 let paquetesYaProcesadosSolicitud = 0;
                 let paquetesLimitadosSolicitud = 0;
+                const facturasNuevasSolicitud: FacturaNuevaNotificacion[] = [];
 
                 for (const paqueteId of paqueteIds) {
-                    tamanoActual = obtenerTamanoCarpeta(almacenPath);
+                    tamanoActual = obtenerTamanoCarpeta(almacenBasePath);
 
                     if (tamanoActual >= UMBRAL_ALERTA_BYTES) {
                         storageStop = true;
@@ -493,7 +547,7 @@ export async function GET() {
                     );
 
                     if (xmlEntries.length === 0 && txtEntries.length > 0) {
-                        guardarMetadataTxt(almacenPath, paqueteId, txtEntries);
+                        guardarMetadataTxt(path.join(almacenBasePath, perfilClaveSolicitud), paqueteId, txtEntries);
 
                         marcarPaqueteProcesado(controlDir, paqueteId, {
                             requestId: solicitud.requestId,
@@ -528,7 +582,7 @@ export async function GET() {
 
                         const bytesXml = Buffer.byteLength(meta.xmlContenido, 'utf8');
 
-                        tamanoActual = obtenerTamanoCarpeta(almacenPath);
+                        tamanoActual = obtenerTamanoCarpeta(almacenBasePath);
 
                         if (tamanoActual + bytesXml > LIMITE_BYTES) {
                             storageStop = true;
@@ -540,19 +594,26 @@ export async function GET() {
                         const anioStr = String(fechaDoc.getFullYear());
                         const mesStr = String(fechaDoc.getMonth() + 1).padStart(2, '0');
 
-                        const folderDest = path.join(almacenPath, anioStr, mesStr);
+                        const folderDest = path.join(almacenBasePath, perfilClaveSolicitud, anioStr, mesStr);
                         asegurarDirectorio(folderDest);
 
                         const fileName = `${meta.emisorRfc}_${meta.uuid}.xml`;
                         const filePath = path.join(folderDest, fileName);
                         const archivoYaExiste = fs.existsSync(filePath);
+                        const existente = await prisma.facturaRecibida.findUnique({
+                            where: { uuid: meta.uuid },
+                            select: { id: true },
+                        });
 
                         if (!archivoYaExiste) {
                             fs.writeFileSync(filePath, meta.xmlContenido, 'utf8');
                             tamanoActual += bytesXml;
+                        }
+
+                        if (!existente) {
                             nuevasFacturas++;
                             xmlNuevosSolicitud++;
-                            facturasNuevasNotificacion.push({
+                            facturasNuevasSolicitud.push({
                                 uuid: meta.uuid,
                                 emisorRfc: meta.emisorRfc,
                                 emisorNombre: meta.emisorNombre,
@@ -565,14 +626,10 @@ export async function GET() {
                             xmlActualizadosGlobal++;
                         }
 
-                        const existente = await prisma.facturaRecibida.findUnique({
-                            where: { uuid: meta.uuid },
-                            select: { id: true },
-                        });
-
                         await prisma.facturaRecibida.upsert({
                             where: { uuid: meta.uuid },
                             update: {
+                                perfilId: perfilSolicitud.id,
                                 emisorRfc: meta.emisorRfc,
                                 emisorNombre: meta.emisorNombre,
                                 receptorRfc: meta.receptorRfc || satSession.rfc,
@@ -585,6 +642,7 @@ export async function GET() {
                             },
                             create: {
                                 uuid: meta.uuid,
+                                perfilId: perfilSolicitud.id,
                                 emisorRfc: meta.emisorRfc,
                                 emisorNombre: meta.emisorNombre,
                                 receptorRfc: meta.receptorRfc || satSession.rfc,
@@ -596,10 +654,6 @@ export async function GET() {
                                 estadoSat: 'VIGENTE',
                             },
                         });
-
-                        if (existente) {
-                            // ya fue contado como actualizado por archivo local si aplicó
-                        }
 
                         xmlProcesadosSolicitud++;
                         huboContenidoUtil = true;
@@ -657,6 +711,20 @@ export async function GET() {
                 }
 
                 if (xmlProcesadosSolicitud > 0) {
+                    let correoDestinoSolicitud: string | null = null;
+                    let errorCorreoSolicitud: string | null = null;
+
+                    if (facturasNuevasSolicitud.length > 0) {
+                        try {
+                            correoDestinoSolicitud = await enviarNotificacionFacturasRecibidas(facturasNuevasSolicitud);
+                            if (correoDestinoSolicitud) correosAvisoEnviados++;
+                        } catch (error) {
+                            errorCorreoSolicitud = error instanceof Error ? error.message : String(error ?? '');
+                            erroresNotificacionCorreo.push(errorCorreoSolicitud);
+                            console.error('Error enviando notificacion de facturas recibidas:', error);
+                        }
+                    }
+
                     await prisma.solicitudSat.update({
                         where: { id: solicitud.id },
                         data: {
@@ -668,6 +736,8 @@ export async function GET() {
                                 `XML procesados: ${xmlProcesadosSolicitud}`,
                                 `XML nuevos: ${xmlNuevosSolicitud}`,
                                 `XML actualizados: ${xmlActualizadosSolicitud}`,
+                                correoDestinoSolicitud ? `Correo de aviso enviado a ${correoDestinoSolicitud}` : '',
+                                errorCorreoSolicitud ? `No se pudo enviar correo de aviso: ${errorCorreoSolicitud}` : '',
                                 xmlSaltadosSolicitud > 0 ? `XML saltados: ${xmlSaltadosSolicitud}` : '',
                                 paquetesYaProcesadosSolicitud > 0 ? `Paquetes ya procesados: ${paquetesYaProcesadosSolicitud}` : '',
                             ]
@@ -758,30 +828,18 @@ export async function GET() {
             }
         }
 
-        let notificacionCorreoDestino: string | null = null;
-        let errorNotificacionCorreo: string | null = null;
-
-        if (facturasNuevasNotificacion.length > 0) {
-            try {
-                notificacionCorreoDestino = await enviarNotificacionFacturasRecibidas(facturasNuevasNotificacion);
-            } catch (error) {
-                errorNotificacionCorreo = error instanceof Error ? error.message : String(error ?? '');
-                console.error('Error enviando notificacion de facturas recibidas:', error);
-            }
-        }
-
         const partes: string[] = [];
 
         if (nuevasFacturas > 0) {
             partes.push(`XML nuevos guardados: ${nuevasFacturas}`);
         }
 
-        if (notificacionCorreoDestino) {
-            partes.push(`Correo de aviso enviado a ${notificacionCorreoDestino}`);
+        if (correosAvisoEnviados > 0) {
+            partes.push(`Correos de aviso enviados: ${correosAvisoEnviados}`);
         }
 
-        if (errorNotificacionCorreo) {
-            partes.push(`No se pudo enviar correo de aviso: ${errorNotificacionCorreo}`);
+        if (erroresNotificacionCorreo.length > 0) {
+            partes.push(`Errores de correo de aviso: ${erroresNotificacionCorreo.length}`);
         }
 
         if (xmlActualizadosGlobal > 0) {

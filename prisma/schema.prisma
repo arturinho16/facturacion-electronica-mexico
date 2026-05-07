@@ -304,6 +304,8 @@ model SatClaveUnidad {
 model FacturaRecibida {
   id             String   @id @default(uuid())
   uuid           String   @unique
+  perfilId       String?
+  perfil         PerfilDescargaSat? @relation(fields: [perfilId], references: [id])
   emisorRfc      String
   emisorNombre   String
   receptorRfc    String
@@ -318,12 +320,29 @@ model FacturaRecibida {
 model SolicitudSat {
   id           String   @id @default(uuid())
   requestId    String   @unique
+  perfilId     String?
+  perfil       PerfilDescargaSat? @relation(fields: [perfilId], references: [id])
   fechaInicio  DateTime
   fechaFin     DateTime
   estado       String   @default("PENDIENTE") // PENDIENTE, COMPLETADA, RECHAZADA, ERROR
   mensajeSat   String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+model PerfilDescargaSat {
+  id        String   @id @default(uuid())
+  clave     String   @unique
+  nombre    String
+  rfc       String?
+  rfcNombre String?
+  activo    Boolean  @default(true)
+  orden     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  facturas    FacturaRecibida[]
+  solicitudes SolicitudSat[]
 }
 
 // ==========================================

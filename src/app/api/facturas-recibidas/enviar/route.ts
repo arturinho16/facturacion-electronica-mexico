@@ -10,6 +10,12 @@ type FacturaResumen = {
     moneda?: string;
 };
 
+type AttachmentInput = {
+    filename?: string;
+    content?: string;
+    contentType?: string;
+};
+
 function escapeHtml(value: string) {
     return value
         .replace(/&/g, '&amp;')
@@ -31,11 +37,35 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const destinatario = String(body.destinatario || '').trim().toLowerCase();
         const zipBase64 = String(body.zipBase64 || '');
+        const attachmentBase64 = String(body.attachmentBase64 || zipBase64 || '');
+        const attachmentFilename = String(body.attachmentFilename || `Facturas_recibidas_${new Date().toISOString().slice(0, 10)}.zip`);
+        const attachmentContentType = String(body.attachmentContentType || 'application/zip');
+        const asunto = String(body.asunto || `Facturas recibidas seleccionadas (${Array.isArray(body.facturas) ? body.facturas.length : 0})`);
+        const titulo = String(body.titulo || 'Facturas recibidas seleccionadas');
+        const descripcion = String(body.descripcion || 'Adjunto encontrarás un ZIP con los XML seleccionados.');
         const facturas = Array.isArray(body.facturas) ? (body.facturas as FacturaResumen[]) : [];
+        const attachmentsInput = Array.isArray(body.attachments) ? (body.attachments as AttachmentInput[]) : [];
+        const attachments = attachmentsInput.length > 0
+            ? attachmentsInput
+                .filter((attachment) => attachment.content && attachment.filename)
+                .map((attachment) => ({
+                    filename: String(attachment.filename),
+                    content: String(attachment.content),
+                    encoding: 'base64' as const,
+                    contentType: attachment.contentType ? String(attachment.contentType) : undefined,
+                }))
+            : [
+                {
+                    filename: attachmentFilename,
+                    content: attachmentBase64,
+                    encoding: 'base64' as const,
+                    contentType: attachmentContentType,
+                },
+            ];
 
-        if (!destinatario || !zipBase64 || facturas.length === 0) {
+        if (!destinatario || attachments.length === 0 || facturas.length === 0) {
             return NextResponse.json(
-                { error: 'Faltan correo destino, facturas o archivo ZIP.' },
+                { error: 'Faltan correo destino, facturas o archivo adjunto.' },
                 { status: 400 }
             );
         }
@@ -61,11 +91,11 @@ export async function POST(req: NextRequest) {
         await mail.transporter.sendMail({
             from: mail.from,
             to: destinatario,
-            subject: `Facturas recibidas seleccionadas (${facturas.length})`,
+            subject: asunto,
             html: `
                 <div style="font-family:Arial,sans-serif;color:#0f172a;line-height:1.5;">
-                    <h2 style="margin:0 0 12px;">Facturas recibidas seleccionadas</h2>
-                    <p>Adjunto encontrarás un ZIP con <strong>${facturas.length}</strong> XML.</p>
+                    <h2 style="margin:0 0 12px;">${escapeHtml(titulo)}</h2>
+                    <p>${escapeHtml(descripcion)}</p>
                     <p>Total seleccionado: <strong>${fmt(total)}</strong></p>
                     <table style="border-collapse:collapse;width:100%;font-size:14px;margin-top:16px;">
                         <thead>
@@ -81,13 +111,7 @@ export async function POST(req: NextRequest) {
                     ${restantes > 0 ? `<p>Y ${restantes} facturas mas.</p>` : ''}
                 </div>
             `,
-            attachments: [
-                {
-                    filename: `Facturas_recibidas_${new Date().toISOString().slice(0, 10)}.zip`,
-                    content: zipBase64,
-                    encoding: 'base64',
-                },
-            ],
+            attachments,
         });
 
         return NextResponse.json({ ok: true, mensaje: `Correo enviado a ${destinatario}` });

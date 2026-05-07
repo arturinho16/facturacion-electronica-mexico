@@ -9,6 +9,8 @@ const routeModuleMap: Array<{ prefix: string; modulo: string }> = [
   { prefix: '/cotizaciones', modulo: 'cotizaciones' },
   { prefix: '/catalogos/clientes', modulo: 'clientes' },
   { prefix: '/catalogos/productos', modulo: 'productos' },
+  { prefix: '/api/facturas-recibidas/consolidado', modulo: 'consolidado_recibidas' },
+  { prefix: '/facturas-recibidas/consolidado', modulo: 'consolidado_recibidas' },
   { prefix: '/facturas-recibidas', modulo: 'descargas_sat' },
   { prefix: '/configuracion', modulo: 'configuracion' },
 ];

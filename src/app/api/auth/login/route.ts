@@ -52,8 +52,8 @@ export async function POST(req: NextRequest) {
     await prisma.loginAttempt.create({ data: { email: normalizedEmail, ip, success: true } });
 
     const rol = usuario.rol === 'SUPERADMIN' || usuario.rol === 'ADMIN' ? usuario.rol : 'OPERATIVO';
-    const modulos = rol === 'SUPERADMIN'
-      ? getDefaultModulesByRole('SUPERADMIN')
+    const modulos = rol === 'SUPERADMIN' || rol === 'ADMIN'
+      ? getDefaultModulesByRole(rol)
       : parseModules(usuario.modulos);
 
     const token = await signToken({
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     });
 
     return response;
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Error interno del servidor.' }, { status: 500 });
   }
 }

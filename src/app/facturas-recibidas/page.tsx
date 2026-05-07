@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
     ArrowLeft,
     Inbox,
@@ -16,14 +17,16 @@ import {
     LogOut,
     UploadCloud,
     KeyRound,
-    Mail,
     Send,
     Calendar,
     CheckSquare,
+    Download,
+    X,
 } from 'lucide-react';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { pdf } from '@react-pdf/renderer';
+import { PDFDocument } from 'pdf-lib';
 import { FacturaPDF } from '@/lib/pdf/FacturaPDF';
 
 type FacturaRecibida = {
@@ -48,6 +51,30 @@ type SolicitudSAT = {
     createdAt: string;
 };
 
+type PerfilClave = 'principal' | 'perfil_1' | 'perfil_2' | 'perfil_3';
+
+const PERFILES_DESCARGA: Record<PerfilClave, { titulo: string; etiqueta: string; ruta: string; principal: boolean }> = {
+    principal: { titulo: 'Facturas Recibidas', etiqueta: 'RFC principal', ruta: '/facturas-recibidas', principal: true },
+    perfil_1: { titulo: 'Facturas Recibidas - RFC-1', etiqueta: 'RFC-1', ruta: '/facturas-recibidas/perfil-1', principal: false },
+    perfil_2: { titulo: 'Facturas Recibidas - RFC-2', etiqueta: 'RFC-2', ruta: '/facturas-recibidas/perfil-2', principal: false },
+    perfil_3: { titulo: 'Facturas Recibidas - RFC-3', etiqueta: 'RFC-3', ruta: '/facturas-recibidas/perfil-3', principal: false },
+};
+
+const perfilFromPath = (pathname: string): PerfilClave => {
+    if (pathname.includes('/perfil-1')) return 'perfil_1';
+    if (pathname.includes('/perfil-2')) return 'perfil_2';
+    if (pathname.includes('/perfil-3')) return 'perfil_3';
+    return 'principal';
+};
+
+const MAX_FACTURAS_SELECCIONADAS = 31;
+
+type ConfiguracionSatResumen = {
+    rfc: string;
+    nombre: string;
+    fielCargada: boolean;
+} | null;
+
 const ESTADO_SOLICITUD_STYLES: Record<string, string> = {
     PENDIENTE: 'bg-slate-700 text-slate-200',
     EN_PROCESO: 'bg-blue-900/50 text-blue-300',
@@ -58,6 +85,7 @@ const ESTADO_SOLICITUD_STYLES: Record<string, string> = {
     ERROR: 'bg-red-950/50 text-red-300',
     VENCIDA: 'bg-orange-900/50 text-orange-300',
     RESPALDO_REQUERIDO: 'bg-yellow-800/50 text-yellow-200',
+    REINTENTO_MANANA: 'bg-purple-900/50 text-purple-200',
 };
 
 const CAT_FORMA_PAGO: Record<string, string> = {
@@ -308,49 +336,104 @@ const parseXmlToFactura = (xmlStr: string) => {
 type SatLoginModalProps = {
     open: boolean;
     loading: boolean;
+    perfil: PerfilClave;
+    configSat: ConfiguracionSatResumen;
+    onClose: () => void;
     onSubmit: (payload: {
         rfc: string;
+        rfcNombre: string;
         password: string;
         cerFile: File | null;
         keyFile: File | null;
+        usarConfiguracion?: boolean;
     }) => Promise<void>;
 };
 
-function SatLoginModal({ open, loading, onSubmit }: SatLoginModalProps) {
+function SatLoginModal({ open, loading, perfil, configSat, onClose, onSubmit }: SatLoginModalProps) {
     const [rfc, setRfc] = useState('');
+    const [rfcNombre, setRfcNombre] = useState('');
     const [password, setPassword] = useState('');
     const [cerFile, setCerFile] = useState<File | null>(null);
     const [keyFile, setKeyFile] = useState<File | null>(null);
+    const esPrincipal = perfil === 'principal';
 
     if (!open) return null;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!rfc || !password || !cerFile || !keyFile) {
-            alert('Debes capturar RFC, contraseña y seleccionar ambos archivos .cer y .key');
+        if (!rfc || !rfcNombre || !password || !cerFile || !keyFile) {
+            alert('Debes capturar RFC, nombre registrado, contraseña y seleccionar ambos archivos .cer y .key');
             return;
         }
 
-        await onSubmit({ rfc, password, cerFile, keyFile });
+        await onSubmit({ rfc, rfcNombre, password, cerFile, keyFile });
+    };
+
+    const usarConfiguracion = async () => {
+        if (!configSat?.fielCargada) {
+            alert('No hay e.firma FIEL configurada.');
+            return;
+        }
+
+        await onSubmit({
+            rfc: configSat.rfc,
+            rfcNombre: configSat.nombre,
+            password: '',
+            cerFile: null,
+            keyFile: null,
+            usarConfiguracion: true,
+        });
     };
 
     return (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="w-full max-w-2xl bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden">
                 <div className="bg-slate-900 text-white px-6 py-5">
-                    <div className="flex items-center gap-3">
-                        <ShieldCheck className="w-7 h-7 text-emerald-400" />
-                        <div>
-                            <h2 className="text-xl font-bold">Conectar con SAT</h2>
-                            <p className="text-sm text-slate-300">
-                                Inicia sesión con tu e.firma para solicitar y descargar facturas recibidas.
-                            </p>
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                            <ShieldCheck className="w-7 h-7 text-emerald-400" />
+                            <div>
+                                <h2 className="text-xl font-bold">Conectar con SAT</h2>
+                                <p className="text-sm text-slate-300">
+                                    {PERFILES_DESCARGA[perfil].etiqueta}: inicia sesión con e.firma para descargar CFDI recibidos.
+                                </p>
+                            </div>
                         </div>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="rounded-xl p-2 text-slate-300 hover:bg-white/10 hover:text-white"
+                            title="Cerrar"
+                        >
+                            <X className="h-5 w-5" />
+                        </button>
                     </div>
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6">
+                    {esPrincipal && configSat?.fielCargada && (
+                        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <div className="text-sm font-bold text-emerald-800">Usar e.firma configurada</div>
+                                    <div className="text-xs text-emerald-700">
+                                        SAT: {configSat.rfc} - {configSat.nombre || 'Nombre no capturado'}
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={usarConfiguracion}
+                                    disabled={loading}
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                                >
+                                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+                                    Continuar
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div className="space-y-1 md:col-span-2">
                             <label className="text-xs font-bold uppercase text-slate-500">RFC</label>
@@ -360,6 +443,17 @@ function SatLoginModal({ open, loading, onSubmit }: SatLoginModalProps) {
                                 onChange={(e) => setRfc(e.target.value.toUpperCase())}
                                 placeholder="COMO891216CM1"
                                 className="w-full p-3 border-2 border-slate-200 rounded-xl bg-slate-50 outline-none focus:border-blue-500 font-mono text-slate-700 uppercase"
+                            />
+                        </div>
+
+                        <div className="space-y-1 md:col-span-2">
+                            <label className="text-xs font-bold uppercase text-slate-500">Nombre de persona o empresa</label>
+                            <input
+                                type="text"
+                                value={rfcNombre}
+                                onChange={(e) => setRfcNombre(e.target.value)}
+                                placeholder="Nombre registrado ante SAT"
+                                className="w-full p-3 border-2 border-slate-200 rounded-xl bg-slate-50 outline-none focus:border-blue-500 text-slate-700"
                             />
                         </div>
 
@@ -412,7 +506,14 @@ function SatLoginModal({ open, loading, onSubmit }: SatLoginModalProps) {
                         Esta sesión SAT se usará para consultar, verificar y descargar CFDI recibidos.
                     </div>
 
-                    <div className="flex justify-end">
+                    <div className="flex flex-wrap justify-between gap-3">
+                        <Link
+                            href="/facturas"
+                            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 font-bold text-slate-700 hover:bg-slate-50"
+                        >
+                            <ArrowLeft className="h-4 w-4" />
+                            Regresar a facturas
+                        </Link>
                         <button
                             type="submit"
                             disabled={loading}
@@ -432,104 +533,311 @@ function SatLoginModal({ open, loading, onSubmit }: SatLoginModalProps) {
     );
 }
 
-type EnviarCorreoModalProps = {
+type ConsolidadoModalProps = {
     open: boolean;
     loading: boolean;
-    totalSeleccionadas: number;
+    mes: string;
+    facturas: FacturaRecibida[];
     onClose: () => void;
-    onSubmit: (correo: string) => Promise<void>;
+    onMesChange: (mes: string) => void;
+    onDownload: () => Promise<void>;
+    onSend: (correo: string) => Promise<void>;
 };
 
-function EnviarCorreoModal({
+function ConsolidadoModal({
     open,
     loading,
-    totalSeleccionadas,
+    mes,
+    facturas,
     onClose,
-    onSubmit,
-}: EnviarCorreoModalProps) {
+    onMesChange,
+    onDownload,
+    onSend,
+}: ConsolidadoModalProps) {
     const [correo, setCorreo] = useState('');
+    const total = facturas.reduce((sum, factura) => sum + Number(factura.total || 0), 0);
+    const proveedores = new Set(facturas.map((factura) => factura.emisorRfc)).size;
 
     if (!open) return null;
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSend = async () => {
         if (!correo) {
             alert('Captura un correo destino.');
             return;
         }
 
-        await onSubmit(correo);
+        await onSend(correo);
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-            <form onSubmit={handleSubmit} className="w-full max-w-lg bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden">
-                <div className="bg-slate-900 text-white px-6 py-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+                <div className="bg-slate-900 px-6 py-5 text-white">
                     <div className="flex items-center gap-3">
-                        <Mail className="w-7 h-7 text-blue-300" />
+                        <Archive className="h-7 w-7 text-indigo-300" />
                         <div>
-                            <h2 className="text-xl font-bold">Enviar facturas por correo</h2>
-                            <p className="text-sm text-slate-300">
-                                Se enviará un ZIP con {totalSeleccionadas} XML seleccionados.
-                            </p>
+                            <h2 className="text-xl font-bold">Consolidado mensual</h2>
+                            <p className="text-sm text-slate-300">Genera un XLSX agrupado por proveedores y totales.</p>
                         </div>
                     </div>
                 </div>
 
-                <div className="p-6 space-y-5">
-                    <div className="space-y-1">
-                        <label className="text-xs font-bold uppercase text-slate-500">Correo destino</label>
+                <div className="space-y-5 p-6">
+                    <label className="block space-y-1">
+                        <span className="text-xs font-bold uppercase text-slate-500">Mes a consolidar</span>
+                        <input
+                            type="month"
+                            value={mes}
+                            onChange={(e) => onMesChange(e.target.value)}
+                            className="w-full rounded-xl border-2 border-slate-200 bg-slate-50 p-3 font-bold text-slate-700 outline-none focus:border-indigo-500"
+                        />
+                    </label>
+
+                    <div className="grid grid-cols-3 gap-3 text-center">
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                            <div className="text-xs font-bold uppercase text-slate-400">Facturas</div>
+                            <div className="mt-1 text-xl font-black text-slate-800">{facturas.length}</div>
+                        </div>
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                            <div className="text-xs font-bold uppercase text-slate-400">Proveedores</div>
+                            <div className="mt-1 text-xl font-black text-slate-800">{proveedores}</div>
+                        </div>
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                            <div className="text-xs font-bold uppercase text-slate-400">Total</div>
+                            <div className="mt-1 text-sm font-black text-blue-700">
+                                {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(total)}
+                            </div>
+                        </div>
+                    </div>
+
+                    <label className="block space-y-1">
+                        <span className="text-xs font-bold uppercase text-slate-500">Correo destino</span>
                         <input
                             type="email"
                             value={correo}
                             onChange={(e) => setCorreo(e.target.value)}
                             placeholder="contador@empresa.com"
-                            className="w-full p-3 border-2 border-slate-200 rounded-xl bg-slate-50 outline-none focus:border-blue-500 text-slate-700"
+                            className="w-full rounded-xl border-2 border-slate-200 bg-slate-50 p-3 text-slate-700 outline-none focus:border-indigo-500"
                         />
-                    </div>
+                    </label>
 
-                    <div className="flex justify-end gap-3">
+                    <div className="flex flex-wrap justify-end gap-3">
                         <button
                             type="button"
                             onClick={onClose}
                             disabled={loading}
-                            className="px-5 py-3 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50 disabled:opacity-50"
+                            className="rounded-xl border border-slate-200 bg-white px-5 py-3 font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                         >
                             Cancelar
                         </button>
                         <button
-                            type="submit"
-                            disabled={loading}
-                            className="flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:opacity-50"
+                            type="button"
+                            onClick={onDownload}
+                            disabled={loading || facturas.length === 0}
+                            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 font-bold text-white hover:bg-indigo-700 disabled:opacity-50"
                         >
-                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
+                            Descargar XLSX
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleSend}
+                            disabled={loading || facturas.length === 0}
+                            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+                        >
+                            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                             Enviar
                         </button>
                     </div>
                 </div>
-            </form>
+            </div>
         </div>
     );
 }
 
+function escapeXmlCell(value: string) {
+    return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function sheetXml(rows: Array<Array<string | number>>) {
+    const rowXml = rows
+        .map((row, rowIndex) => {
+            const cells = row
+                .map((value, colIndex) => {
+                    const ref = `${String.fromCharCode(65 + colIndex)}${rowIndex + 1}`;
+                    if (typeof value === 'number') {
+                        return `<c r="${ref}"><v>${Number.isFinite(value) ? value : 0}</v></c>`;
+                    }
+                    return `<c r="${ref}" t="inlineStr"><is><t>${escapeXmlCell(String(value || ''))}</t></is></c>`;
+                })
+                .join('');
+
+            return `<row r="${rowIndex + 1}">${cells}</row>`;
+        })
+        .join('');
+
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${rowXml}</sheetData></worksheet>`;
+}
+
+async function crearConsolidadoXlsx(facturas: FacturaRecibida[], mes: string) {
+    const porProveedor = new Map<string, {
+        rfc: string;
+        nombre: string;
+        cantidad: number;
+        total: number;
+        ultima: string;
+    }>();
+
+    const porDia = new Map<string, { fecha: string; cantidad: number; total: number; proveedores: Set<string> }>();
+
+    for (const factura of facturas) {
+        const total = Number(factura.total || 0);
+        const keyProveedor = `${factura.emisorRfc}|${factura.emisorNombre}`;
+        const proveedor = porProveedor.get(keyProveedor) || {
+            rfc: factura.emisorRfc,
+            nombre: factura.emisorNombre,
+            cantidad: 0,
+            total: 0,
+            ultima: factura.fechaEmision,
+        };
+
+        proveedor.cantidad += 1;
+        proveedor.total += total;
+        if (new Date(factura.fechaEmision).getTime() > new Date(proveedor.ultima).getTime()) {
+            proveedor.ultima = factura.fechaEmision;
+        }
+        porProveedor.set(keyProveedor, proveedor);
+
+        const fecha = facturaFechaKey(factura);
+        const dia = porDia.get(fecha) || { fecha, cantidad: 0, total: 0, proveedores: new Set<string>() };
+        dia.cantidad += 1;
+        dia.total += total;
+        dia.proveedores.add(factura.emisorRfc);
+        porDia.set(fecha, dia);
+    }
+
+    const totalGeneral = facturas.reduce((sum, factura) => sum + Number(factura.total || 0), 0);
+
+    const resumenRows: Array<Array<string | number>> = [
+        ['Consolidado de facturas recibidas'],
+        ['Mes', mes],
+        ['Facturas', facturas.length],
+        ['Proveedores unicos', porProveedor.size],
+        ['Total MXN', totalGeneral],
+    ];
+
+    const proveedorRows: Array<Array<string | number>> = [
+        ['RFC emisor', 'Nombre emisor', 'Facturas', 'Total', 'Promedio', 'Ultima factura'],
+        ...Array.from(porProveedor.values())
+            .sort((a, b) => b.total - a.total)
+            .map((item) => [
+                item.rfc,
+                item.nombre,
+                item.cantidad,
+                item.total,
+                item.cantidad ? item.total / item.cantidad : 0,
+                fechaCfdiKey(item.ultima),
+            ]),
+    ];
+
+    const diaRows: Array<Array<string | number>> = [
+        ['Fecha', 'Facturas', 'Proveedores unicos', 'Total'],
+        ...Array.from(porDia.values())
+            .sort((a, b) => a.fecha.localeCompare(b.fecha))
+            .map((item) => [item.fecha, item.cantidad, item.proveedores.size, item.total]),
+    ];
+
+    const facturaRows: Array<Array<string | number>> = [
+        ['Fecha', 'RFC emisor', 'Nombre emisor', 'UUID', 'Moneda', 'Total', 'Estado'],
+        ...facturas.map((factura) => [
+            facturaFechaKey(factura),
+            factura.emisorRfc,
+            factura.emisorNombre,
+            factura.uuid,
+            factura.moneda,
+            Number(factura.total || 0),
+            factura.estadoSat,
+        ]),
+    ];
+
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet4.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>`);
+    zip.folder('_rels')?.file('.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`);
+    zip.folder('xl')?.file('workbook.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Resumen" sheetId="1" r:id="rId1"/><sheet name="Proveedores" sheetId="2" r:id="rId2"/><sheet name="Dias" sheetId="3" r:id="rId3"/><sheet name="Facturas" sheetId="4" r:id="rId4"/></sheets></workbook>`);
+    zip.folder('xl')?.folder('_rels')?.file('workbook.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/><Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet4.xml"/></Relationships>`);
+    const worksheets = zip.folder('xl')?.folder('worksheets');
+    worksheets?.file('sheet1.xml', sheetXml(resumenRows));
+    worksheets?.file('sheet2.xml', sheetXml(proveedorRows));
+    worksheets?.file('sheet3.xml', sheetXml(diaRows));
+    worksheets?.file('sheet4.xml', sheetXml(facturaRows));
+
+    return zip.generateAsync({ type: 'blob' });
+}
+
+function extraerFechaCfdi(xmlContenido?: string) {
+    if (!xmlContenido) return '';
+    const match = xmlContenido.match(/<(?:\w+:)?Comprobante[^>]*\sFecha=["']([^"']+)["']/i);
+    return match?.[1] || '';
+}
+
+function fechaCfdiKey(fecha: string) {
+    if (!fecha) return '';
+    const match = fecha.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (match) return match[1];
+
+    const parsed = new Date(fecha);
+    if (Number.isNaN(parsed.getTime())) return fecha.slice(0, 10);
+    return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Mexico_City',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).format(parsed);
+}
+
+function facturaFechaKey(factura: FacturaRecibida) {
+    return fechaCfdiKey(extraerFechaCfdi(factura.xmlContenido) || factura.fechaEmision);
+}
+
+function paginasVisibles(actual: number, total: number) {
+    const paginas = new Set<number>([1, total]);
+    for (let page = actual - 2; page <= actual + 2; page++) {
+        if (page >= 1 && page <= total) paginas.add(page);
+    }
+    return Array.from(paginas).sort((a, b) => a - b);
+}
+
 export default function FacturasRecibidasPage() {
+    const pathname = usePathname();
+    const perfilClave = perfilFromPath(pathname || '');
+    const perfilActual = PERFILES_DESCARGA[perfilClave];
     const [facturas, setFacturas] = useState<FacturaRecibida[]>([]);
     const [solicitudes, setSolicitudes] = useState<SolicitudSAT[]>([]);
     const [loading, setLoading] = useState(true);
     const [sincronizando, setSincronizando] = useState(false);
-    const [autoComprobando, setAutoComprobando] = useState(false);
     const [q, setQ] = useState('');
     const [mesVista, setMesVista] = useState(() => new Date().toISOString().slice(0, 7));
     const [seleccionadas, setSeleccionadas] = useState<string[]>([]);
-    const [mostrarModalCorreo, setMostrarModalCorreo] = useState(false);
-    const [enviandoCorreo, setEnviandoCorreo] = useState(false);
     const [paginaActual, setPaginaActual] = useState(1);
-    const ITEMS_POR_PAGINA = 50;
+    const ITEMS_POR_PAGINA = 10;
+    const SOLICITUDES_POR_PAGINA = 10;
     const [mostrarHistorial, setMostrarHistorial] = useState(false);
+    const [paginaHistorial, setPaginaHistorial] = useState(1);
+    const [historialInicio, setHistorialInicio] = useState('');
+    const [historialFin, setHistorialFin] = useState('');
     const [mostrarLoginSat, setMostrarLoginSat] = useState(false);
     const [satSesionActiva, setSatSesionActiva] = useState(false);
     const [satRfc, setSatRfc] = useState('');
+    const [satRfcNombre, setSatRfcNombre] = useState('');
+    const [configSat, setConfigSat] = useState<ConfiguracionSatResumen>(null);
     const [loginSatCargando, setLoginSatCargando] = useState(false);
+    const [mostrarConsolidado, setMostrarConsolidado] = useState(false);
+    const [mesConsolidado, setMesConsolidado] = useState(() => new Date().toISOString().slice(0, 7));
+    const [consolidadoCargando, setConsolidadoCargando] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const verificandoRef = useRef(false);
@@ -548,13 +856,13 @@ export default function FacturasRecibidasPage() {
         try {
             const timestamp = new Date().getTime();
 
-            const resFacturas = await fetch(`/api/facturas-recibidas?t=${timestamp}`, {
+            const resFacturas = await fetch(`/api/facturas-recibidas?perfil=${perfilClave}&t=${timestamp}`, {
                 cache: 'no-store',
             });
             const dataFacturas = await resFacturas.json();
             setFacturas(Array.isArray(dataFacturas) ? dataFacturas : []);
 
-            const resSolicitudes = await fetch(`/api/facturas-recibidas/solicitudes?t=${timestamp}`, {
+            const resSolicitudes = await fetch(`/api/facturas-recibidas/solicitudes?perfil=${perfilClave}&t=${timestamp}`, {
                 cache: 'no-store',
             });
             const dataSolicitudes = await resSolicitudes.json();
@@ -564,22 +872,26 @@ export default function FacturasRecibidasPage() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [perfilClave]);
 
     const cargarSesionSat = useCallback(async () => {
         try {
-            const res = await fetch('/api/facturas-recibidas/sesion', { cache: 'no-store' });
+            const res = await fetch(`/api/facturas-recibidas/sesion?perfil=${perfilClave}`, { cache: 'no-store' });
             const data = await res.json();
 
             setSatSesionActiva(Boolean(data.activa));
             setSatRfc(data.rfc || '');
+            setSatRfcNombre(data.rfcNombre || data.perfil?.rfcNombre || '');
+            setConfigSat(data.configuracion || null);
             setMostrarLoginSat(!data.activa);
         } catch {
             setSatSesionActiva(false);
             setSatRfc('');
+            setSatRfcNombre('');
+            setConfigSat(null);
             setMostrarLoginSat(true);
         }
-    }, []);
+    }, [perfilClave]);
 
     useEffect(() => {
         void cargar();
@@ -593,21 +905,18 @@ export default function FacturasRecibidasPage() {
         setPaginaActual(1);
     }, [q, mesVista]);
 
-    const esSolicitudActiva = useCallback((s: SolicitudSAT) => {
-        if (s.estado === 'PENDIENTE' || s.estado === 'EN_PROCESO') return true;
+    useEffect(() => {
+        setPaginaHistorial(1);
+    }, [historialInicio, historialFin, mostrarHistorial]);
 
-        // rescata solicitudes viejas que quedaron COMPLETADA sin haber guardado XML realmente
-        if (s.estado === 'COMPLETADA' && !(s.mensajeSat || '').includes('XML guardados:')) {
-            return true;
-        }
-
-        return false;
+    const esSolicitudVerificable = useCallback((s: SolicitudSAT) => {
+        return s.estado === 'PENDIENTE' || s.estado === 'EN_PROCESO';
     }, []);
 
     const marcarSolicitudesComoVerificando = useCallback(() => {
         setSolicitudes((prev) =>
             prev.map((s) =>
-                esSolicitudActiva(s)
+                esSolicitudVerificable(s)
                     ? {
                         ...s,
                         estado: s.estado === 'COMPLETADA' ? 'EN_PROCESO' : 'EN_PROCESO',
@@ -616,7 +925,7 @@ export default function FacturasRecibidasPage() {
                     : s
             )
         );
-    }, [esSolicitudActiva]);
+    }, [esSolicitudVerificable]);
 
     const verificarDescargas = useCallback(
         async ({ silent = false, background = false }: { silent?: boolean; background?: boolean } = {}) => {
@@ -631,7 +940,7 @@ export default function FacturasRecibidasPage() {
             marcarSolicitudesComoVerificando();
 
             try {
-                const res = await fetch('/api/facturas-recibidas/verificar', {
+                const res = await fetch(`/api/facturas-recibidas/verificar?perfil=${perfilClave}`, {
                     method: 'GET',
                     cache: 'no-store',
                 });
@@ -663,52 +972,37 @@ export default function FacturasRecibidasPage() {
                 }
             }
         },
-        [cargar, marcarSolicitudesComoVerificando]
+        [cargar, marcarSolicitudesComoVerificando, perfilClave]
     );
-
-    const tieneSolicitudesActivas = solicitudes.some(esSolicitudActiva);
-
-    useEffect(() => {
-        if (!satSesionActiva || !tieneSolicitudesActivas) {
-            setAutoComprobando(false);
-            return;
-        }
-
-        setAutoComprobando(true);
-
-        void verificarDescargas({ silent: true, background: true });
-
-        const intervalId = window.setInterval(() => {
-            void verificarDescargas({ silent: true, background: true });
-        }, 45000);
-
-        return () => {
-            window.clearInterval(intervalId);
-            setAutoComprobando(false);
-        };
-    }, [satSesionActiva, tieneSolicitudesActivas, verificarDescargas]);
 
     const handleLoginSat = async ({
         rfc,
+        rfcNombre,
         password,
         cerFile,
         keyFile,
+        usarConfiguracion,
     }: {
         rfc: string;
+        rfcNombre: string;
         password: string;
         cerFile: File | null;
         keyFile: File | null;
+        usarConfiguracion?: boolean;
     }) => {
         setLoginSatCargando(true);
 
         try {
             const formData = new FormData();
+            formData.append('perfil', perfilClave);
             formData.append('rfc', rfc);
+            formData.append('rfcNombre', rfcNombre);
             formData.append('password', password);
+            if (usarConfiguracion) formData.append('usarConfiguracion', 'true');
             if (cerFile) formData.append('cer', cerFile);
             if (keyFile) formData.append('key', keyFile);
 
-            const res = await fetch('/api/facturas-recibidas/sesion', {
+            const res = await fetch(`/api/facturas-recibidas/sesion?perfil=${perfilClave}`, {
                 method: 'POST',
                 body: formData,
             });
@@ -722,6 +1016,7 @@ export default function FacturasRecibidasPage() {
 
             setSatSesionActiva(true);
             setSatRfc(data.rfc || rfc);
+            setSatRfcNombre(data.rfcNombre || rfcNombre);
             setMostrarLoginSat(false);
             alert('✅ Sesión SAT iniciada correctamente.');
         } catch {
@@ -733,7 +1028,7 @@ export default function FacturasRecibidasPage() {
 
     const handleCerrarSesionSat = async () => {
         try {
-            const res = await fetch('/api/facturas-recibidas/sesion', {
+            const res = await fetch(`/api/facturas-recibidas/sesion?perfil=${perfilClave}`, {
                 method: 'DELETE',
             });
 
@@ -746,8 +1041,8 @@ export default function FacturasRecibidasPage() {
 
             setSatSesionActiva(false);
             setSatRfc('');
+            setSatRfcNombre('');
             setMostrarLoginSat(true);
-            setAutoComprobando(false);
             alert('✅ Sesión SAT cerrada.');
         } catch {
             alert('No fue posible cerrar la sesión SAT.');
@@ -761,7 +1056,7 @@ export default function FacturasRecibidasPage() {
             const res = await fetch('/api/facturas-recibidas', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ fechaInicio, fechaFin }),
+                body: JSON.stringify({ fechaInicio, fechaFin, perfil: perfilClave }),
             });
 
             const data = await res.json();
@@ -771,7 +1066,7 @@ export default function FacturasRecibidasPage() {
                 return;
             }
 
-            alert(`✅ ${data.mensaje}`);
+            alert(`✅ ${data.mensaje}\nLa verificación queda en segundo plano. Se enviará correo cuando las facturas entren al sistema.`);
             await cargar();
         } catch {
             alert('Error de conexión al sincronizar con el SAT.');
@@ -796,7 +1091,7 @@ export default function FacturasRecibidasPage() {
             const res = await fetch('/api/facturas-recibidas/manual', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ xmlContenido: text }),
+                body: JSON.stringify({ xmlContenido: text, perfil: perfilClave }),
             });
 
             const data = await res.json();
@@ -853,52 +1148,168 @@ export default function FacturasRecibidasPage() {
         }
     };
 
-    const getFacturasParaAccion = () => {
-        if (seleccionadas.length > 0) {
-            return facturas.filter((f) => seleccionadas.includes(f.id));
-        }
-
-        return facturasFiltradas;
-    };
-
-    const handleConsolidado = async () => {
-        const facturasParaConsolidar = getFacturasParaAccion();
-
-        if (facturasParaConsolidar.length === 0) {
-            alert('No hay facturas para consolidar.');
-            return;
-        }
-
+    const crearZipFacturas = async (facturasZip: FacturaRecibida[]) => {
         const zip = new JSZip();
-        const folderXML = zip.folder('Gastos_XML');
         let agregadas = 0;
 
-        facturasParaConsolidar.forEach((f) => {
+        facturasZip.forEach((f) => {
             if (f.xmlContenido) {
-                folderXML?.file(`${f.emisorRfc}_${f.uuid}.xml`, f.xmlContenido);
+                zip.file(`${f.emisorRfc}_${f.uuid}.xml`, f.xmlContenido);
                 agregadas++;
             }
         });
 
         if (agregadas === 0) {
-            alert('No hay XML disponibles en base de datos para consolidar.');
+            throw new Error('No hay XML disponibles en base de datos para descargar.');
+        }
+
+        return zip.generateAsync({ type: 'blob' });
+    };
+
+    const crearPdfUnidoFacturas = async (facturasPdf: FacturaRecibida[]) => {
+        const mergedPdf = await PDFDocument.create();
+        let agregadas = 0;
+
+        for (const factura of facturasPdf) {
+            if (!factura.xmlContenido) continue;
+
+            const facturaParseada = parseXmlToFactura(factura.xmlContenido);
+            const blob = await pdf(<FacturaPDF factura={facturaParseada} />).toBlob();
+            const singlePdf = await PDFDocument.load(await blob.arrayBuffer());
+            const copiedPages = await mergedPdf.copyPages(singlePdf, singlePdf.getPageIndices());
+            copiedPages.forEach((page) => mergedPdf.addPage(page));
+            agregadas++;
+        }
+
+        if (agregadas === 0) {
+            throw new Error('No hay XML disponibles para generar PDF.');
+        }
+
+        return new Blob([await mergedPdf.save()], { type: 'application/pdf' });
+    };
+
+    const blobToBase64 = (blob: Blob) =>
+        new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(blob);
+        });
+
+    const handleDescargarSeleccionadas = async () => {
+        if (facturasSeleccionadas.length === 0) {
+            alert('Selecciona al menos una factura.');
             return;
         }
 
-        const zipBlob = await zip.generateAsync({ type: 'blob' });
-        saveAs(zipBlob, 'Gastos_Consolidado_XML.zip');
+        if (facturasSeleccionadas.length > MAX_FACTURAS_SELECCIONADAS) {
+            alert(`Sólo puedes descargar hasta ${MAX_FACTURAS_SELECCIONADAS} facturas seleccionadas.`);
+            return;
+        }
+
+        try {
+            const zipBlob = await crearZipFacturas(facturasSeleccionadas);
+            saveAs(zipBlob, `Facturas_recibidas_${perfilClave}_${new Date().toISOString().slice(0, 10)}.zip`);
+        } catch (error) {
+            alert(error instanceof Error ? error.message : 'No se pudo preparar el ZIP.');
+        }
+    };
+
+    const handleDescargarConsolidado = async () => {
+        const facturasMes = facturas.filter((f) => facturaFechaKey(f).slice(0, 7) === mesConsolidado);
+
+        if (facturasMes.length === 0) {
+            alert('No hay facturas para el mes seleccionado.');
+            return;
+        }
+
+        setConsolidadoCargando(true);
+
+        try {
+            const xlsxBlob = await crearConsolidadoXlsx(facturasMes, mesConsolidado);
+            saveAs(xlsxBlob, `Consolidado_facturas_recibidas_${perfilClave}_${mesConsolidado}.xlsx`);
+        } catch (error) {
+            console.error(error);
+            alert('No se pudo generar el XLSX.');
+        } finally {
+            setConsolidadoCargando(false);
+        }
+    };
+
+    const handleEnviarConsolidado = async (correo: string) => {
+        const facturasMes = facturas.filter((f) => facturaFechaKey(f).slice(0, 7) === mesConsolidado);
+
+        if (facturasMes.length === 0) {
+            alert('No hay facturas para el mes seleccionado.');
+            return;
+        }
+
+        setConsolidadoCargando(true);
+
+        try {
+            const xlsxBlob = await crearConsolidadoXlsx(facturasMes, mesConsolidado);
+            const zipBlob = await crearZipFacturas(facturasMes);
+            const pdfBlob = await crearPdfUnidoFacturas(facturasMes);
+            const xlsxBase64 = await blobToBase64(xlsxBlob);
+            const zipBase64 = await blobToBase64(zipBlob);
+            const pdfBase64 = await blobToBase64(pdfBlob);
+            const res = await fetch('/api/facturas-recibidas/enviar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    destinatario: correo,
+                    attachments: [
+                        {
+                            filename: `Consolidado_facturas_recibidas_${perfilClave}_${mesConsolidado}.xlsx`,
+                            content: xlsxBase64,
+                            contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                        },
+                        {
+                            filename: `XML_facturas_recibidas_${perfilClave}_${mesConsolidado}.zip`,
+                            content: zipBase64,
+                            contentType: 'application/zip',
+                        },
+                        {
+                            filename: `PDF_facturas_recibidas_${perfilClave}_${mesConsolidado}.pdf`,
+                            content: pdfBase64,
+                            contentType: 'application/pdf',
+                        },
+                    ],
+                    asunto: `Consolidado facturas recibidas ${mesConsolidado}`,
+                    titulo: `Consolidado facturas recibidas ${mesConsolidado}`,
+                    descripcion: `Adjunto encontrarás el XLSX, el ZIP de XML y el PDF unido de ${facturasMes.length} facturas recibidas.`,
+                    facturas: facturasMes.map((f) => ({
+                        uuid: f.uuid,
+                        emisorRfc: f.emisorRfc,
+                        emisorNombre: f.emisorNombre,
+                        fechaEmision: f.fechaEmision,
+                        total: Number(f.total),
+                        moneda: f.moneda,
+                    })),
+                }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                alert(`❌ Error: ${data.error || 'No se pudo enviar el consolidado.'}`);
+                return;
+            }
+
+            alert(`✅ ${data.mensaje}`);
+            setMostrarConsolidado(false);
+        } catch (error) {
+            console.error(error);
+            alert('No se pudo enviar el consolidado.');
+        } finally {
+            setConsolidadoCargando(false);
+        }
     };
 
     const fmt = (n: number) =>
         new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n);
 
-    const fmtFecha = (d: string) => new Date(d).toLocaleDateString('es-MX');
-
-    const fechaKey = (d: string) => {
-        const fecha = new Date(d);
-        if (Number.isNaN(fecha.getTime())) return d.slice(0, 10);
-        return fecha.toISOString().slice(0, 10);
-    };
+    const fmtFecha = (d: string) => fechaCfdiKey(d).split('-').reverse().join('/');
 
     const fmtMes = (mes: string) => {
         if (!mes) return 'Todos los meses';
@@ -911,9 +1322,9 @@ export default function FacturasRecibidasPage() {
 
     const facturasFiltradas = facturas.filter((f) => {
         const busqueda = q.toLowerCase();
-        const keyDia = fechaKey(f.fechaEmision);
+        const keyDia = facturaFechaKey(f);
         const keyMes = keyDia.slice(0, 7);
-        const fechaTexto = new Date(f.fechaEmision).toLocaleDateString('es-MX', {
+        const fechaTexto = new Date(`${keyDia}T12:00:00`).toLocaleDateString('es-MX', {
             day: '2-digit',
             month: 'long',
             year: 'numeric',
@@ -930,26 +1341,44 @@ export default function FacturasRecibidasPage() {
             keyMes.includes(busqueda) ||
             fechaTexto.includes(busqueda)
         );
-    }).sort((a, b) => new Date(a.fechaEmision).getTime() - new Date(b.fechaEmision).getTime());
+    }).sort((a, b) => facturaFechaKey(a).localeCompare(facturaFechaKey(b)));
 
     const totalPaginas = Math.ceil(facturasFiltradas.length / ITEMS_POR_PAGINA);
     const startIndex = (paginaActual - 1) * ITEMS_POR_PAGINA;
     const facturasPaginadas = facturasFiltradas.slice(startIndex, startIndex + ITEMS_POR_PAGINA);
     const facturasSeleccionadas = facturas.filter((f) => seleccionadas.includes(f.id));
-    const idsFiltrados = facturasFiltradas.map((f) => f.id);
     const idsPaginados = facturasPaginadas.map((f) => f.id);
     const totalMes = facturasFiltradas.reduce((sum, f) => sum + Number(f.total || 0), 0);
+    const totalSeleccionado = facturasSeleccionadas.reduce((sum, f) => sum + Number(f.total || 0), 0);
+    const facturasConsolidadoMes = facturas.filter((f) => facturaFechaKey(f).slice(0, 7) === mesConsolidado);
 
     const gruposPorDia = facturasPaginadas.reduce<Record<string, FacturaRecibida[]>>((acc, factura) => {
-        const key = fechaKey(factura.fechaEmision);
+        const key = facturaFechaKey(factura);
         acc[key] = acc[key] || [];
         acc[key].push(factura);
         return acc;
     }, {});
 
+    const solicitudesFiltradas = solicitudes.filter((solicitud) => {
+        const inicio = solicitud.fechaInicio.slice(0, 10);
+        const fin = solicitud.fechaFin.slice(0, 10);
+        if (historialInicio && fin < historialInicio) return false;
+        if (historialFin && inicio > historialFin) return false;
+        return true;
+    });
+    const totalPaginasHistorial = Math.max(1, Math.ceil(solicitudesFiltradas.length / SOLICITUDES_POR_PAGINA));
+    const solicitudesPaginadas = solicitudesFiltradas.slice(
+        (paginaHistorial - 1) * SOLICITUDES_POR_PAGINA,
+        paginaHistorial * SOLICITUDES_POR_PAGINA
+    );
+
     const toggleSeleccion = (id: string) => {
         setSeleccionadas((prev) =>
-            prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+            prev.includes(id)
+                ? prev.filter((item) => item !== id)
+                : prev.length >= MAX_FACTURAS_SELECCIONADAS
+                    ? (alert(`Sólo puedes seleccionar hasta ${MAX_FACTURAS_SELECCIONADAS} facturas.`), prev)
+                    : [...prev, id]
         );
     };
 
@@ -957,67 +1386,12 @@ export default function FacturasRecibidasPage() {
         setSeleccionadas((prev) => {
             const todosSeleccionados = ids.length > 0 && ids.every((id) => prev.includes(id));
             if (todosSeleccionados) return prev.filter((id) => !ids.includes(id));
-            return Array.from(new Set([...prev, ...ids]));
+            const next = Array.from(new Set([...prev, ...ids])).slice(0, MAX_FACTURAS_SELECCIONADAS);
+            if (next.length < new Set([...prev, ...ids]).size) {
+                alert(`Sólo puedes seleccionar hasta ${MAX_FACTURAS_SELECCIONADAS} facturas.`);
+            }
+            return next;
         });
-    };
-
-    const handleEnviarSeleccionadas = async (correo: string) => {
-        if (facturasSeleccionadas.length === 0) {
-            alert('Selecciona al menos una factura.');
-            return;
-        }
-
-        setEnviandoCorreo(true);
-
-        try {
-            const zip = new JSZip();
-            let agregadas = 0;
-
-            facturasSeleccionadas.forEach((f) => {
-                if (f.xmlContenido) {
-                    zip.file(`${f.emisorRfc}_${f.uuid}.xml`, f.xmlContenido);
-                    agregadas++;
-                }
-            });
-
-            if (agregadas === 0) {
-                alert('Las facturas seleccionadas no tienen XML disponible.');
-                return;
-            }
-
-            const zipBase64 = await zip.generateAsync({ type: 'base64' });
-            const res = await fetch('/api/facturas-recibidas/enviar', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    destinatario: correo,
-                    zipBase64,
-                    facturas: facturasSeleccionadas.map((f) => ({
-                        uuid: f.uuid,
-                        emisorRfc: f.emisorRfc,
-                        emisorNombre: f.emisorNombre,
-                        fechaEmision: f.fechaEmision,
-                        total: Number(f.total),
-                        moneda: f.moneda,
-                    })),
-                }),
-            });
-
-            const data = await res.json();
-
-            if (!res.ok) {
-                alert(`❌ Error: ${data.error || 'No se pudo enviar el correo.'}`);
-                return;
-            }
-
-            alert(`✅ ${data.mensaje}`);
-            setMostrarModalCorreo(false);
-        } catch (error) {
-            console.error(error);
-            alert('Error al preparar el correo.');
-        } finally {
-            setEnviandoCorreo(false);
-        }
     };
 
     return (
@@ -1032,7 +1406,10 @@ export default function FacturasRecibidasPage() {
                             <ArrowLeft className="w-5 h-5" /> Panel
                         </Link>
                         <Inbox className="w-8 h-8 text-pink-600 ml-2" />
-                        <h1 className="text-3xl font-bold">Facturas Recibidas</h1>
+                        <div>
+                            <h1 className="text-3xl font-bold">{perfilActual.titulo}</h1>
+                            <p className="text-sm font-medium text-slate-500">{perfilActual.etiqueta}</p>
+                        </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
@@ -1044,7 +1421,7 @@ export default function FacturasRecibidasPage() {
                         >
                             <ShieldCheck className="w-4 h-4" />
                             <span className="text-xs font-bold">
-                                {satSesionActiva ? `SAT: ${satRfc}` : 'SAT no conectado'}
+                                {satSesionActiva ? `SAT: ${satRfc}${satRfcNombre ? ` - ${satRfcNombre}` : ''}` : 'SAT no conectado'}
                             </span>
                         </div>
 
@@ -1066,6 +1443,21 @@ export default function FacturasRecibidasPage() {
                             </button>
                         )}
                     </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                    {Object.entries(PERFILES_DESCARGA).map(([clave, perfil]) => (
+                        <Link
+                            key={clave}
+                            href={perfil.ruta}
+                            className={`rounded-xl border px-4 py-2 text-sm font-bold transition-colors ${clave === perfilClave
+                                ? 'border-pink-200 bg-pink-50 text-pink-700'
+                                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                                }`}
+                        >
+                            {perfil.etiqueta}
+                        </Link>
+                    ))}
                 </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-4">
@@ -1142,11 +1534,18 @@ export default function FacturasRecibidasPage() {
 
                         <div className="flex flex-wrap gap-2">
                             <button
-                                onClick={handleConsolidado}
+                                onClick={() => setMostrarConsolidado(true)}
                                 className="h-10 flex items-center gap-2 bg-indigo-600 text-white px-4 rounded-xl hover:bg-indigo-700 transition-all font-bold text-sm shadow-lg shadow-indigo-100"
                             >
                                 <Archive className="w-4 h-4" /> Consolidado
                             </button>
+
+                            <Link
+                                href="/facturas-recibidas/consolidado"
+                                className="h-10 flex items-center gap-2 bg-rose-600 text-white px-4 rounded-xl hover:bg-rose-700 transition-all font-bold text-sm shadow-lg shadow-rose-100"
+                            >
+                                <Archive className="w-4 h-4" /> Consolidado global
+                            </Link>
 
                             <button
                                 onClick={() => fileInputRef.current?.click()}
@@ -1157,15 +1556,7 @@ export default function FacturasRecibidasPage() {
                             </button>
 
                             <button
-                                onClick={() => setMostrarModalCorreo(true)}
-                                disabled={facturasSeleccionadas.length === 0}
-                                className="h-10 flex items-center gap-2 bg-blue-600 text-white px-4 rounded-xl hover:bg-blue-700 transition-all font-bold text-sm shadow-lg shadow-blue-100 disabled:opacity-50"
-                            >
-                                <Mail className="w-4 h-4" /> Enviar correo
-                            </button>
-
-                            <button
-                                onClick={() => setMostrarHistorial(!mostrarHistorial)}
+                                onClick={() => setMostrarHistorial(true)}
                                 className="h-10 flex items-center gap-2 bg-white text-slate-600 px-4 rounded-xl border border-slate-200 hover:bg-slate-100 transition-all font-bold text-sm shadow-sm"
                             >
                                 <Clock className="w-4 h-4" /> Historial SAT
@@ -1174,70 +1565,134 @@ export default function FacturasRecibidasPage() {
                     </div>
                 </div>
 
-                {autoComprobando && (
-                    <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl px-4 py-3 text-sm font-bold">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Auto-comprobando SAT cada 45 segundos en esta pantalla. El servidor tambien revisa cada 5 minutos mientras este encendido.
-                    </div>
-                )}
-
                 {mostrarHistorial && (
-                    <div className="bg-slate-800 p-6 rounded-2xl shadow-lg text-white">
-                        <h3 className="font-bold mb-4 flex items-center gap-2">
-                            <Clock className="w-5 h-5 text-blue-400" />
-                            Historial de Peticiones al SAT
-                        </h3>
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+                        <div className="flex max-h-[88vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl bg-slate-800 text-white shadow-2xl">
+                            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 px-6 py-5">
+                                <h3 className="flex items-center gap-2 font-bold">
+                                    <Clock className="h-5 w-5 text-blue-400" />
+                                    Historial SAT
+                                </h3>
+                                <button
+                                    onClick={() => setMostrarHistorial(false)}
+                                    className="rounded-xl border border-slate-600 px-4 py-2 text-sm font-bold text-slate-200 hover:bg-slate-700"
+                                >
+                                    Cerrar
+                                </button>
+                            </div>
 
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-left">
-                                <thead className="text-slate-400 border-b border-slate-700">
-                                    <tr>
-                                        <th className="pb-2">Fecha Solicitada</th>
-                                        <th className="pb-2">Token (Request ID)</th>
-                                        <th className="pb-2">Estado</th>
-                                        <th className="pb-2">Mensaje SAT</th>
-                                        <th className="pb-2">Creado</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-700">
-                                    {solicitudes.length === 0 ? (
+                            <div className="flex flex-wrap items-end gap-3 border-b border-slate-700 px-6 py-4">
+                                <label className="space-y-1">
+                                    <span className="text-[11px] font-bold uppercase text-slate-400">Desde</span>
+                                    <input
+                                        type="date"
+                                        value={historialInicio}
+                                        onChange={(e) => setHistorialInicio(e.target.value)}
+                                        className="h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm font-bold text-slate-900 outline-none"
+                                    />
+                                </label>
+                                <label className="space-y-1">
+                                    <span className="text-[11px] font-bold uppercase text-slate-400">Hasta</span>
+                                    <input
+                                        type="date"
+                                        value={historialFin}
+                                        onChange={(e) => setHistorialFin(e.target.value)}
+                                        className="h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm font-bold text-slate-900 outline-none"
+                                    />
+                                </label>
+                                <button
+                                    onClick={() => {
+                                        setHistorialInicio('');
+                                        setHistorialFin('');
+                                    }}
+                                    className="h-10 rounded-xl border border-slate-600 px-4 text-sm font-bold text-slate-200 hover:bg-slate-700"
+                                >
+                                    Limpiar
+                                </button>
+                            </div>
+
+                            <div className="overflow-auto px-6 py-4">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="border-b border-slate-700 text-slate-400">
                                         <tr>
-                                            <td colSpan={5} className="py-4 text-center text-slate-500">
-                                                No hay peticiones recientes.
-                                            </td>
+                                            <th className="pb-2">Fecha solicitada</th>
+                                            <th className="pb-2">Token</th>
+                                            <th className="pb-2">Estado</th>
+                                            <th className="pb-2">Mensaje SAT</th>
+                                            <th className="pb-2">Creado</th>
                                         </tr>
-                                    ) : null}
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-700">
+                                        {solicitudesPaginadas.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={5} className="py-6 text-center text-slate-500">
+                                                    No hay peticiones en este filtro.
+                                                </td>
+                                            </tr>
+                                        ) : null}
 
-                                    {solicitudes.map((s) => (
-                                        <tr key={s.id}>
-                                            <td className="py-3 font-medium">
-                                                {fmtFecha(s.fechaInicio)} - {fmtFecha(s.fechaFin)}
-                                            </td>
+                                        {solicitudesPaginadas.map((s) => (
+                                            <tr key={s.id}>
+                                                <td className="py-3 font-medium">
+                                                    {fmtFecha(s.fechaInicio)} - {fmtFecha(s.fechaFin)}
+                                                </td>
+                                                <td className="py-3 pr-4 font-mono text-xs text-blue-300 break-all">
+                                                    {s.requestId}
+                                                </td>
+                                                <td className="py-3">
+                                                    <span className={`rounded-md px-2 py-1 text-xs font-bold ${ESTADO_SOLICITUD_STYLES[s.estado] || 'bg-slate-700 text-slate-200'}`}>
+                                                        {s.estado}
+                                                    </span>
+                                                </td>
+                                                <td className="max-w-md py-3 text-xs text-slate-300">
+                                                    {s.mensajeSat || 'Sin mensaje del SAT todavía.'}
+                                                </td>
+                                                <td className="py-3 text-slate-400">
+                                                    {new Date(s.createdAt).toLocaleString('es-MX')}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
 
-                                            <td className="py-3 font-mono text-xs text-blue-300 break-all pr-4">
-                                                {s.requestId}
-                                            </td>
-
-                                            <td className="py-3">
-                                                <span
-                                                    className={`px-2 py-1 rounded-md text-xs font-bold ${ESTADO_SOLICITUD_STYLES[s.estado] || 'bg-slate-700 text-slate-200'
-                                                        }`}
-                                                >
-                                                    {s.estado}
-                                                </span>
-                                            </td>
-
-                                            <td className="py-3 text-slate-300 text-xs max-w-md">
-                                                {s.mensajeSat || 'Sin mensaje del SAT todavía.'}
-                                            </td>
-
-                                            <td className="py-3 text-slate-400">
-                                                {new Date(s.createdAt).toLocaleString('es-MX')}
-                                            </td>
-                                        </tr>
+                            <div className="flex items-center justify-between border-t border-slate-700 px-6 py-4">
+                                <span className="text-sm text-slate-400">
+                                    Página {paginaHistorial} de {totalPaginasHistorial} | {solicitudesFiltradas.length} solicitudes
+                                </span>
+                                <div className="flex flex-wrap gap-2">
+                                    <button
+                                        onClick={() => setPaginaHistorial((p) => Math.max(1, p - 1))}
+                                        disabled={paginaHistorial === 1}
+                                        className="rounded-xl border border-slate-600 px-4 py-2 text-sm font-bold text-slate-200 hover:bg-slate-700 disabled:opacity-50"
+                                    >
+                                        Anterior
+                                    </button>
+                                    {paginasVisibles(paginaHistorial, totalPaginasHistorial).map((page, index, pages) => (
+                                        <React.Fragment key={page}>
+                                            {index > 0 && page - pages[index - 1] > 1 ? (
+                                                <span className="px-2 py-2 text-sm font-bold text-slate-500">...</span>
+                                            ) : null}
+                                            <button
+                                                onClick={() => setPaginaHistorial(page)}
+                                                className={`h-10 min-w-10 rounded-xl border px-3 text-sm font-bold ${page === paginaHistorial
+                                                    ? 'border-blue-400 bg-blue-500 text-white'
+                                                    : 'border-slate-600 text-slate-200 hover:bg-slate-700'
+                                                    }`}
+                                            >
+                                                {page}
+                                            </button>
+                                        </React.Fragment>
                                     ))}
-                                </tbody>
-                            </table>
+                                    <button
+                                        onClick={() => setPaginaHistorial((p) => Math.min(totalPaginasHistorial, p + 1))}
+                                        disabled={paginaHistorial === totalPaginasHistorial}
+                                        className="rounded-xl border border-slate-600 px-4 py-2 text-sm font-bold text-slate-200 hover:bg-slate-700 disabled:opacity-50"
+                                    >
+                                        Siguiente
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -1287,28 +1742,28 @@ export default function FacturasRecibidasPage() {
                             <span className="font-mono font-bold text-blue-700">{fmt(totalMes)}</span>
                             <span className="text-slate-400">|</span>
                             <span className="text-slate-600">{facturasSeleccionadas.length} seleccionadas</span>
+                            <span className="font-mono font-bold text-emerald-700">{fmt(totalSeleccionado)}</span>
                         </div>
 
                         <div className="flex flex-wrap gap-2">
                             <button
-                                onClick={() => toggleSeleccionIds(idsFiltrados)}
-                                disabled={idsFiltrados.length === 0}
+                                onClick={() => toggleSeleccionIds(idsPaginados)}
+                                disabled={idsPaginados.length === 0}
                                 className="h-9 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                             >
                                 <CheckSquare className="w-4 h-4 text-blue-600" />
-                                {idsFiltrados.length > 0 && idsFiltrados.every((id) => seleccionadas.includes(id))
-                                    ? 'Quitar mes'
-                                    : 'Seleccionar mes'}
-                            </button>
-
-                            <button
-                                onClick={() => toggleSeleccionIds(idsPaginados)}
-                                disabled={idsPaginados.length === 0}
-                                className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                            >
                                 {idsPaginados.length > 0 && idsPaginados.every((id) => seleccionadas.includes(id))
                                     ? 'Quitar pagina'
                                     : 'Seleccionar pagina'}
+                            </button>
+
+                            <button
+                                onClick={handleDescargarSeleccionadas}
+                                disabled={facturasSeleccionadas.length === 0 || facturasSeleccionadas.length > MAX_FACTURAS_SELECCIONADAS}
+                                className="h-9 flex items-center gap-2 rounded-xl bg-emerald-600 px-3 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                            >
+                                <Download className="w-4 h-4" />
+                                Descargar seleccionadas
                             </button>
 
                             {seleccionadas.length > 0 && (
@@ -1445,7 +1900,7 @@ export default function FacturasRecibidasPage() {
                             <span className="text-sm text-slate-500 font-medium">
                                 Página {paginaActual} de {totalPaginas}
                             </span>
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
                                 <button
                                     onClick={() => setPaginaActual((p) => Math.max(1, p - 1))}
                                     disabled={paginaActual === 1}
@@ -1453,6 +1908,22 @@ export default function FacturasRecibidasPage() {
                                 >
                                     Anterior
                                 </button>
+                                {paginasVisibles(paginaActual, totalPaginas).map((page, index, pages) => (
+                                    <React.Fragment key={page}>
+                                        {index > 0 && page - pages[index - 1] > 1 ? (
+                                            <span className="px-2 py-2 text-sm font-bold text-slate-400">...</span>
+                                        ) : null}
+                                        <button
+                                            onClick={() => setPaginaActual(page)}
+                                            className={`h-10 min-w-10 rounded-xl border px-3 text-sm font-bold ${page === paginaActual
+                                                ? 'border-pink-300 bg-pink-600 text-white'
+                                                : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'
+                                                }`}
+                                        >
+                                            {page}
+                                        </button>
+                                    </React.Fragment>
+                                ))}
                                 <button
                                     onClick={() => setPaginaActual((p) => Math.min(totalPaginas, p + 1))}
                                     disabled={paginaActual === totalPaginas}
@@ -1469,15 +1940,21 @@ export default function FacturasRecibidasPage() {
             <SatLoginModal
                 open={mostrarLoginSat}
                 loading={loginSatCargando}
+                perfil={perfilClave}
+                configSat={configSat}
+                onClose={() => setMostrarLoginSat(false)}
                 onSubmit={handleLoginSat}
             />
 
-            <EnviarCorreoModal
-                open={mostrarModalCorreo}
-                loading={enviandoCorreo}
-                totalSeleccionadas={facturasSeleccionadas.length}
-                onClose={() => setMostrarModalCorreo(false)}
-                onSubmit={handleEnviarSeleccionadas}
+            <ConsolidadoModal
+                open={mostrarConsolidado}
+                loading={consolidadoCargando}
+                mes={mesConsolidado}
+                facturas={facturasConsolidadoMes}
+                onClose={() => setMostrarConsolidado(false)}
+                onMesChange={setMesConsolidado}
+                onDownload={handleDescargarConsolidado}
+                onSend={handleEnviarConsolidado}
             />
         </div>
     );

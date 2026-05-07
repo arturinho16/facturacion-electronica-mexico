@@ -1,0 +1,100 @@
+[
+  {
+    "id": "1778026854588-wn6jjxgv22o",
+    "ok": true,
+    "destino": "drive",
+    "filename": "respaldo-sistema-2026-05-06T00-20-52-002Z.json",
+    "location": "https://drive.google.com/file/d/1D44Gzrr27VgTV3uaSzqDsDP3DKvgMoxh/view?usp=drivesdk",
+    "source": "manual",
+    "startedAt": "2026-05-06T00:20:51.957Z",
+    "finishedAt": "2026-05-06T00:20:54.588Z",
+    "message": "Respaldo enviado a Google Drive: respaldo-sistema-2026-05-06T00-20-52-002Z.json"
+  },
+  {
+    "id": "1778026848493-zr5l002qebs",
+    "ok": true,
+    "destino": "onedrive",
+    "filename": "respaldo-sistema-2026-05-06T00-20-42-428Z.json",
+    "location": "https://onedrive.live.com?cid=e1d3240681c84a29&id=E1D3240681C84A29!s03af4b6be96646078b07ae8d3899b735",
+    "source": "manual",
+    "startedAt": "2026-05-06T00:20:42.307Z",
+    "finishedAt": "2026-05-06T00:20:48.493Z",
+    "message": "Respaldo enviado a OneDrive: respaldo-sistema-2026-05-06T00-20-42-428Z.json"
+  },
+  {
+    "id": "1778025706685-m3sg6l5lhu",
+    "ok": true,
+    "destino": "drive",
+    "filename": "respaldo-sistema-2026-05-06T00-01-44-167Z.json",
+    "location": "https://drive.google.com/file/d/1DdIG61d7EFOqk-pVUxnXHRWVe7PMv8yb/view?usp=drivesdk",
+    "source": "manual",
+    "startedAt": "2026-05-06T00:01:44.125Z",
+    "finishedAt": "2026-05-06T00:01:46.686Z",
+    "message": "Respaldo enviado a Google Drive: respaldo-sistema-2026-05-06T00-01-44-167Z.json"
+  },
+  {
+    "id": "1778025704431-u5thejqm5n",
+    "ok": true,
+    "destino": "onedrive",
+    "filename": "respaldo-sistema-2026-05-06T00-01-40-557Z.json",
+    "location": "https://onedrive.live.com?cid=e1d3240681c84a29&id=E1D3240681C84A29!sf8d6496e9a324c959428e0c17f735ae4",
+    "source": "manual",
+    "startedAt": "2026-05-06T00:01:40.458Z",
+    "finishedAt": "2026-05-06T00:01:44.431Z",
+    "message": "Respaldo enviado a OneDrive: respaldo-sistema-2026-05-06T00-01-40-557Z.json"
+  },
+  {
+    "id": "1778025439776-l1vbn01h78k",
+    "ok": true,
+    "destino": "onedrive",
+    "filename": "respaldo-sistema-2026-05-05T23-57-15-506Z.json",
+    "location": "https://onedrive.live.com?cid=e1d3240681c84a29&id=E1D3240681C84A29!s002db04b0c004d46b46366511b77d00e",
+    "source": "manual",
+    "startedAt": "2026-05-05T23:57:15.395Z",
+    "finishedAt": "2026-05-05T23:57:19.776Z",
+    "message": "Respaldo enviado a OneDrive: respaldo-sistema-2026-05-05T23-57-15-506Z.json"
+  },
+  {
+    "id": "1778024356582-fihmqt5klyj",
+    "ok": true,
+    "destino": "drive",
+    "filename": "respaldo-sistema-2026-05-05T23-39-13-741Z.json",
+    "location": "https://drive.google.com/file/d/1u9SAf2nk8DwUpoa6cvA5Il15NmCs84uV/view?usp=drivesdk",
+    "source": "manual",
+    "startedAt": "2026-05-05T23:39:13.666Z",
+    "finishedAt": "2026-05-05T23:39:16.582Z",
+    "message": "Respaldo enviado a Google Drive: respaldo-sistema-2026-05-05T23-39-13-741Z.json"
+  },
+  {
+    "id": "1778024334035-1slw8282p3g",
+    "ok": true,
+    "destino": "drive",
+    "filename": "respaldo-sistema-2026-05-05T23-38-50-839Z.json",
+    "location": "https://drive.google.com/file/d/1BoNgtJMvOw8JXJ5-juvxtzqGwQgWbewh/view?usp=drivesdk",
+    "source": "manual",
+    "startedAt": "2026-05-05T23:38:50.746Z",
+    "finishedAt": "2026-05-05T23:38:54.035Z",
+    "message": "Respaldo enviado a Google Drive: respaldo-sistema-2026-05-05T23-38-50-839Z.json"
+  },
+  {
+    "id": "1778023023647-n9g24evsbm",
+    "ok": false,
+    "destino": "drive",
+    "filename": "respaldo-sistema-2026-05-05T23-17-02-992Z.json",
+    "source": "manual",
+    "startedAt": "2026-05-05T23:17:02.920Z",
+    "finishedAt": "2026-05-05T23:17:03.648Z",
+    "message": "File not found: FacturacionRespaldos."
+  },
+  {
+    "id": "1778013227497-taink6a61yq",
+    "ok": true,
+    "destino": "local",
+    "filename": "respaldo-sistema-2026-05-05T20-33-47-483Z.json",
+    "location": "/home/arturcm/facturacion-electronica-mexico/respaldos-sistema/respaldo-sistema-2026-05-05T20-33-47-483Z.json",
+    "source": "manual",
+    "startedAt": "2026-05-05T20:33:47.337Z",
+    "finishedAt": "2026-05-05T20:33:47.497Z",
+    "message": "Respaldo local creado: respaldo-sistema-2026-05-05T20-33-47-483Z.json"
+  }
+]

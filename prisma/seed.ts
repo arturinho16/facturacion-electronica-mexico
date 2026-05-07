@@ -17,7 +17,8 @@ async function main() {
                 productos: true,
                 cotizaciones: true,
                 configuracion: true,
-                descargas_sat: true
+                descargas_sat: true,
+                consolidado_recibidas: true
             }
         },
         create: {
@@ -34,7 +35,8 @@ async function main() {
                 productos: true,
                 cotizaciones: true,
                 configuracion: true,
-                descargas_sat: true
+                descargas_sat: true,
+                consolidado_recibidas: true
             }
         }
     });

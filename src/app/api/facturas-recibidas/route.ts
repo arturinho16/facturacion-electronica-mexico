@@ -4,13 +4,29 @@ import { DescargaMasivaSAT } from '@/lib/sat/descarga-masiva';
 import { getSatCredentialsAsBinary } from '@/lib/sat/session-store';
 import { getFielCredentialsAsBinary } from '@/lib/configuracion';
 import { startFacturasRecibidasCron } from '@/lib/sat/facturas-recibidas-cron';
+import { ensurePerfilDescargaSat, normalizarPerfilClave } from '@/lib/sat/perfiles';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const perfilClave = normalizarPerfilClave(req.nextUrl.searchParams.get('perfil'));
+    const perfil = await ensurePerfilDescargaSat(perfilClave);
+    const satCreds = getSatCredentialsAsBinary(perfilClave) || (perfilClave === 'principal' ? await getFielCredentialsAsBinary() : null);
+    const receptorRfc = (satCreds?.rfc || perfil.rfc || '').trim().toUpperCase();
     const facturas = await prisma.facturaRecibida.findMany({
+      where: {
+        AND: [
+          {
+            OR: [
+              { perfilId: perfil.id },
+              ...(perfilClave === 'principal' ? [{ perfilId: null }] : []),
+            ],
+          },
+          ...(receptorRfc ? [{ receptorRfc }] : []),
+        ],
+      },
       orderBy: { fechaEmision: 'asc' },
     });
 
@@ -28,6 +44,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { fechaInicio, fechaFin } = body;
+    const perfilClave = normalizarPerfilClave(body.perfil || req.nextUrl.searchParams.get('perfil'));
+    const perfil = await ensurePerfilDescargaSat(perfilClave);
 
     if (!fechaInicio || !fechaFin) {
       return NextResponse.json(
@@ -36,7 +54,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const satCreds = getSatCredentialsAsBinary() || await getFielCredentialsAsBinary();
+    const satCreds = getSatCredentialsAsBinary(perfilClave) || (perfilClave === 'principal' ? await getFielCredentialsAsBinary() : null);
 
     if (!satCreds) {
       return NextResponse.json(
@@ -65,6 +83,7 @@ export async function POST(req: NextRequest) {
       where: {
         fechaInicio: start,
         fechaFin: end,
+        perfilId: perfil.id,
         estado: { in: ['PENDIENTE', 'EN_PROCESO'] },
       },
     });
@@ -103,6 +122,7 @@ export async function POST(req: NextRequest) {
     await prisma.solicitudSat.create({
       data: {
         requestId: solicitud.requestId,
+        perfilId: perfil.id,
         fechaInicio: start,
         fechaFin: end,
         estado: 'PENDIENTE',

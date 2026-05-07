@@ -147,6 +147,7 @@ const MODULOS = [
   { id: 'productos', label: 'Productos' },
   { id: 'nomina', label: 'Nómina' },
   { id: 'descargas_sat', label: 'Facturas recibidas' },
+  { id: 'consolidado_recibidas', label: 'Consolidado recibidas' },
   { id: 'configuracion', label: 'Configuración' },
 ];
 

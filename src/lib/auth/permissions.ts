@@ -7,6 +7,7 @@ export const MODULOS_SISTEMA = [
     'productos',
     'cotizaciones',
     'descargas_sat',
+    'consolidado_recibidas',
     'configuracion',
 ] as const;
 
