@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { timbrarFactura, DatosFactura, normalizarObjetoImp } from '@/lib/sat/timbrar';
 import { registrarTimbreUsado } from '@/lib/configuracion';
+import { normalizarTipoComprobante } from '@/lib/sat/tipos-comprobante';
+import { validateHidrocarburosFactura } from '@/modules/cfdi-complements/hidrocarburos';
 
 export async function POST(
   _req: NextRequest,
@@ -32,6 +34,24 @@ export async function POST(
       );
     }
 
+    const tipoComprobante = normalizarTipoComprobante(factura.tipoComprobante);
+    if (tipoComprobante === 'P') {
+      return NextResponse.json(
+        { error: 'El tipo P - Pago requiere complemento de pagos 2.0. Crea el borrador, pero el timbrado necesita el flujo de pagos relacionado.' },
+        { status: 400 }
+      );
+    }
+
+    const erroresHyp = validateHidrocarburosFactura({
+      tipoComprobante,
+      emisor: {},
+      conceptos: factura.conceptos,
+    });
+
+    if (erroresHyp.length) {
+      return NextResponse.json({ error: erroresHyp.join(' ') }, { status: 400 });
+    }
+
     const datosParaTimbrar: DatosFactura = {
       serie: factura.serie,
       folio: factura.folio,
@@ -42,7 +62,7 @@ export async function POST(
       moneda: factura.moneda,
       tipoCambio: Number(factura.tipoCambio),
       condicionesPago: factura.condicionesPago,
-      tipoComprobante: factura.tipoComprobante,
+      tipoComprobante,
       subtotal: Number(factura.subtotal),
       descuento: Number(factura.descuento),
       totalIVA: Number(factura.totalIVA),
@@ -76,6 +96,11 @@ export async function POST(
         iepsTasa: Number(c.iepsTasa),
         ivaImporte: Number(c.ivaImporte),
         iepsImporte: Number(c.iepsImporte),
+        requiresHypComplement: c.requiresHypComplement,
+        hypClave: c.hypClave || undefined,
+        hypSubproducto: c.hypSubproducto || undefined,
+        hypTipoPermiso: c.hypTipoPermiso || undefined,
+        hypNumeroPermiso: c.hypNumeroPermiso || undefined,
       })),
     };
 

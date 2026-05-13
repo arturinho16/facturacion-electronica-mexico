@@ -4,6 +4,11 @@ import { useState, useEffect, useRef } from 'react';
 import { Package, PlusCircle, X, ArrowLeft, Upload, Edit2, Download, Search } from 'lucide-react';
 import Link from 'next/link';
 import { formatMoneyMX } from '@/lib/formatos';
+import {
+  HIDROCARBUROS_CLAVES_PROD_SERV,
+  HIDROCARBUROS_UNIDAD,
+  isHidrocarburosClaveProdServ,
+} from '@/modules/cfdi-complements/hidrocarburos';
 
 export default function ProductosPage() {
   const [products, setProducts] = useState<any[]>([]);
@@ -27,6 +32,7 @@ export default function ProductosPage() {
   const [nombreUnidad, setNombreUnidad] = useState('Pieza');
   const [sugerenciasSat, setSugerenciasSat] = useState<any[]>([]);
   const [campoActivoSat, setCampoActivoSat] = useState<'producto' | 'unidad' | null>(null);
+  const esCombustible = isHidrocarburosClaveProdServ(claveProdServ);
 
   const fetchProducts = async () => {
     const res = await fetch('/api/products');
@@ -37,6 +43,12 @@ export default function ProductosPage() {
 
   useEffect(() => { fetchProducts(); }, []);
   useEffect(() => { setPaginaActual(1); }, [q]);
+  useEffect(() => {
+    if (esCombustible) {
+      setClaveUnidad(HIDROCARBUROS_UNIDAD.claveUnidad);
+      setNombreUnidad(HIDROCARBUROS_UNIDAD.unidad);
+    }
+  }, [esCombustible]);
 
   // Función para buscar en el SAT
   const buscarClaveSat = async (query: string, tipo: 'producto' | 'unidad') => {
@@ -93,6 +105,14 @@ export default function ProductosPage() {
     data.nombreProdServ = nombreProdServ;
     data.claveUnidad = claveUnidad;
     data.unidad = nombreUnidad;
+    data.requiresHypComplement = esCombustible;
+    if (esCombustible) {
+      data.hypClave = data.hypClave || claveProdServ;
+      if (!data.hypClave || !data.hypSubproducto) {
+        alert('Los combustibles requieren ClaveHYP y SubProductoHYP antes de guardarse.');
+        return;
+      }
+    }
 
     const url = editingProduct ? `/api/products/${editingProduct.id}` : '/api/products';
     const method = editingProduct ? 'PUT' : 'POST';
@@ -205,6 +225,10 @@ export default function ProductosPage() {
                           onClick={() => {
                             setClaveProdServ(sat.clave);
                             setNombreProdServ(sat.descripcion);
+                            if (isHidrocarburosClaveProdServ(sat.clave)) {
+                              setClaveUnidad(HIDROCARBUROS_UNIDAD.claveUnidad);
+                              setNombreUnidad(HIDROCARBUROS_UNIDAD.unidad);
+                            }
                             setCampoActivoSat(null);
                           }}
                           className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-slate-100 last:border-0"
@@ -228,6 +252,7 @@ export default function ProductosPage() {
                         setClaveUnidad(e.target.value);
                         buscarClaveSat(e.target.value, 'unidad');
                       }}
+                      disabled={esCombustible}
                       onBlur={() => setTimeout(() => setCampoActivoSat(null), 200)}
                       placeholder="H87"
                       className="w-1/3 p-3 border border-blue-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-mono uppercase"
@@ -270,6 +295,28 @@ export default function ProductosPage() {
                 </div>
               </div>
 
+              {esCombustible && (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+                  <div className="mb-4">
+                    <h3 className="font-bold text-amber-900">Complemento Hidrocarburos y Petrolíferos</h3>
+                    <p className="text-sm text-amber-800">
+                      {HIDROCARBUROS_CLAVES_PROD_SERV[claveProdServ as keyof typeof HIDROCARBUROS_CLAVES_PROD_SERV]} se factura en litros y requiere datos HYP.
+                    </p>
+                  </div>
+                  <input type="hidden" name="requiresHypComplement" value="true" />
+                  <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                    <div className="space-y-1">
+                      <label>ClaveHYP *</label>
+                      <input name="hypClave" defaultValue={editingProduct?.hypClave || claveProdServ} className="w-full p-3 border border-amber-200 rounded-lg outline-none focus:ring-2 focus:ring-amber-500 font-mono" required />
+                    </div>
+                    <div className="space-y-1">
+                      <label>SubProductoHYP *</label>
+                      <input name="hypSubproducto" defaultValue={editingProduct?.hypSubproducto || ''} placeholder="Ej. SP22" className="w-full p-3 border border-amber-200 rounded-lg outline-none focus:ring-2 focus:ring-amber-500 font-mono uppercase" required />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-1"><label>Tasa IVA *</label><select name="ivaTasa" defaultValue={editingProduct?.ivaTasa || "0.16"} className="w-full p-3 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"><option value="0.16">IVA 16%</option><option value="0.08">IVA 8% (Frontera)</option><option value="0.00">IVA 0%</option><option value="0.00">Exento</option></select></div>
                 <div className="space-y-1"><label>Tasa IEPS (Opcional)</label><input name="iepsTasa" type="number" step="0.01" defaultValue={editingProduct?.iepsTasa || "0.00"} className="w-full p-3 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" /></div>
@@ -306,6 +353,7 @@ export default function ProductosPage() {
                             <div className="text-xs flex gap-2 mt-2 font-mono">
                               <span className="bg-slate-100 px-2 py-1 rounded-md border border-slate-200 text-slate-600">SKU: {p.codigoInterno || 'N/A'}</span>
                               <span className="bg-blue-50 px-2 py-1 rounded-md border border-blue-100 text-blue-600">SAT: {p.claveProdServ}</span>
+                              {p.requiresHypComplement && <span className="bg-amber-50 px-2 py-1 rounded-md border border-amber-100 text-amber-700">HYP</span>}
                             </div>
                           </td>
                           <td className="p-5 text-right font-mono text-slate-600">{formatMoneyMX(precio)}</td>

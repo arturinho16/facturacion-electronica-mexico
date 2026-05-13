@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { normalizarObjetoImp } from '@/lib/sat/timbrar';
+import { normalizeHidrocarburosProductInput } from '@/modules/cfdi-complements/hidrocarburos';
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const products = await prisma.product.findMany({
       orderBy: { createdAt: 'desc' },
@@ -13,14 +14,15 @@ export async function GET(req: NextRequest) {
         objetoImpuesto: normalizarObjetoImp(product.objetoImpuesto),
       }))
     );
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Error interno' }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const data = await req.json();
+    const hyp = normalizeHidrocarburosProductInput(data);
 
     // 1. Crear el producto (Con los cast a Number requeridos por Prisma)
     const product = await prisma.product.create({
@@ -33,12 +35,15 @@ export async function POST(req: NextRequest) {
         ivaTasa: Number(data.ivaTasa),                // Cast a Número
         iepsTasa: Number(data.iepsTasa || 0),         // Cast a Número
         claveProdServ: data.claveProdServ,
-        claveUnidad: data.claveUnidad || 'H87',
-        unidad: data.unidad || 'Pieza',
+        claveUnidad: hyp.claveUnidad,
+        unidad: hyp.unidad,
         objetoImpuesto: normalizarObjetoImp(data.objetoImpuesto),
         cuentaPredial: data.cuentaPredial || null,
         numeroPedimento: data.numeroPedimento || null,
         impuestoLocal: data.impuestoLocal ? Number(data.impuestoLocal) : null,
+        requiresHypComplement: hyp.requiresHypComplement,
+        hypClave: hyp.hypClave,
+        hypSubproducto: hyp.hypSubproducto,
       },
     });
 
@@ -66,8 +71,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(product, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error al guardar producto:", error);
-    return NextResponse.json({ error: error.message || 'Error interno' }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Error interno' }, { status: 500 });
   }
 }

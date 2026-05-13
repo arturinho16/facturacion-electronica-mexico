@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   const serie = searchParams.get('serie')?.trim() || 'FAC';
 
   const facturas = await prisma.factura.findMany({
-    where: { serie },
+    where: { esGlobal: false },
     select: { folio: true },
   });
 

@@ -4,7 +4,8 @@
   xmlns:xs="http://www.w3.org/2001/XMLSchema"
   xmlns:fn="http://www.w3.org/2005/xpath-functions"
   xmlns:cfdi="http://www.sat.gob.mx/cfd/4"
-  xmlns:nomina12="http://www.sat.gob.mx/nomina12">
+  xmlns:nomina12="http://www.sat.gob.mx/nomina12"
+  xmlns:hidrocarburospetroliferos="http://www.sat.gob.mx/hidrocarburospetroliferos">
 
   <xsl:include href="nomina12.xslt"/>
 
@@ -76,6 +77,15 @@
     
     <xsl:apply-templates select="cfdi:Impuestos/cfdi:Traslados/cfdi:Traslado"/>
     <xsl:apply-templates select="cfdi:Impuestos/cfdi:Retenciones/cfdi:Retencion"/>
+    <xsl:apply-templates select="cfdi:ComplementoConcepto/hidrocarburospetroliferos:HidroYPetro"/>
+  </xsl:template>
+
+  <xsl:template match="hidrocarburospetroliferos:HidroYPetro">
+    <xsl:call-template name="Requerido"><xsl:with-param name="valor" select="@Version"/></xsl:call-template>
+    <xsl:call-template name="Requerido"><xsl:with-param name="valor" select="@TipoPermiso"/></xsl:call-template>
+    <xsl:call-template name="Requerido"><xsl:with-param name="valor" select="@NumeroPermiso"/></xsl:call-template>
+    <xsl:call-template name="Requerido"><xsl:with-param name="valor" select="@ClaveHYP"/></xsl:call-template>
+    <xsl:call-template name="Requerido"><xsl:with-param name="valor" select="@SubProductoHYP"/></xsl:call-template>
   </xsl:template>
 
   <xsl:template match="cfdi:Traslado">

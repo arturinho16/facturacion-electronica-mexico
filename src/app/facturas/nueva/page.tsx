@@ -19,6 +19,12 @@ import { useSearchParams } from 'next/navigation';
 import QRCode from 'qrcode';
 import { REGIMENES_FISCALES, USOS_CFDI } from '@/lib/sat/catalogos';
 import { formatMoneyMX } from '@/lib/formatos';
+import { TIPOS_COMPROBANTE, tipoComprobanteLabel } from '@/lib/sat/tipos-comprobante';
+import {
+  HIDROCARBUROS_UNIDAD,
+  isHidrocarburosClaveProdServ,
+  requiresHidrocarburosComplement,
+} from '@/modules/cfdi-complements/hidrocarburos';
 
 async function getEmpresaLogoUrl() {
   const res = await fetch('/api/configuracion', { cache: 'no-store' }).catch(() => null);
@@ -34,6 +40,9 @@ type EmpresaEmisorPDF = {
   cp: string;
   regimenFiscal: string;
   telefono?: string;
+  hypEnabled?: boolean;
+  hypTipoPermiso?: string;
+  hypNumeroPermiso?: string;
 };
 
 async function getEmpresaEmisor(): Promise<EmpresaEmisorPDF> {
@@ -54,6 +63,9 @@ async function getEmpresaEmisor(): Promise<EmpresaEmisorPDF> {
     cp: config.codigoPostal ? `${config.codigoPostal}${config.estado ? ` ${config.estado}` : ''}` : EMISOR.cp,
     regimenFiscal: config.regimenFiscal || EMISOR.regimenFiscal,
     telefono: config.telefono || EMISOR.telefono,
+    hypEnabled: Boolean(config.hypEnabled),
+    hypTipoPermiso: config.hypTipoPermiso || '',
+    hypNumeroPermiso: config.hypNumeroPermiso || '',
   };
 }
 
@@ -86,6 +98,9 @@ type Product = {
   ivaTasa: number;
   iepsTasa: number;
   objetoImpuesto: string;
+  requiresHypComplement?: boolean;
+  hypClave?: string | null;
+  hypSubproducto?: string | null;
 };
 
 type Concepto = {
@@ -102,6 +117,9 @@ type Concepto = {
   iepsTasa: number;
   objetoImpuesto: string;
   noIdentificacion?: string;
+  requiresHypComplement?: boolean;
+  hypClave?: string | null;
+  hypSubproducto?: string | null;
 };
 
 type FacturaGuardada = {
@@ -112,6 +130,7 @@ type FacturaGuardada = {
   formaPago: string;
   metodoPago: string;
   moneda: string;
+  tipoComprobante: string;
   subtotal: number;
   totalIVA: number;
   total: number;
@@ -221,6 +240,9 @@ const conceptoVacio = (): Concepto => ({
   iepsTasa: 0,
   objetoImpuesto: '02',
   noIdentificacion: '',
+  requiresHypComplement: false,
+  hypClave: '',
+  hypSubproducto: '',
 });
 
 const getCDMXInfo = () => {
@@ -463,6 +485,7 @@ const buildFacturaDataPDF = (factura: FacturaGuardada, emisor: EmpresaEmisorPDF 
     moneda: MAP_MONEDA[factura.moneda] || `${factura.moneda} - Peso Mexicano`,
     formaPago: MAP_FORMA_PAGO[factura.formaPago] || factura.formaPago,
     metodoPago: MAP_METODO_PAGO[factura.metodoPago] || factura.metodoPago,
+    tipoComprobante: tipoComprobanteLabel(factura.tipoComprobante),
     totalLetra: numeroALetra(Number(factura.total)),
   };
 };
@@ -504,7 +527,7 @@ function ClienteSearch({
   return (
     <div ref={ref} className="relative">
       <div className="relative">
-        <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <input
           value={query}
           onChange={(e) => {
@@ -513,7 +536,7 @@ function ClienteSearch({
           }}
           onFocus={() => setOpen(true)}
           placeholder="Buscar por nombre o RFC..."
-          className="w-full pl-9 p-2.5 border rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded-xl border bg-slate-50 py-2.5 !pl-10 pr-3 outline-none focus:ring-2 focus:ring-blue-400"
         />
       </div>
 
@@ -679,6 +702,7 @@ function ModalVistaPrevia({
               )}
               <p className="text-lg text-slate-500 font-mono mt-1">
                 {factura.serie}-{factura.folio}{' '}
+                <span className="mx-2">•</span> {tipoComprobanteLabel(factura.tipoComprobante)}
                 <span className="mx-2">•</span> {fmtFecha(factura.fecha)}
               </p>
             </div>
@@ -890,9 +914,11 @@ function NuevaFacturaForm() {
   const [formaPago, setFormaPago] = useState('03');
   const [metodoPago, setMetodoPago] = useState('PUE');
   const [moneda, setMoneda] = useState('MXN');
+  const [tipoComprobante, setTipoComprobante] = useState('I');
   const [tipoCambio, setTipoCambio] = useState(1);
   const [serie, setSerie] = useState(cdmxInicial.serieStr);
-  const [folio, setFolio] = useState('01');
+  const [folio, setFolio] = useState('');
+  const [folioLoading, setFolioLoading] = useState(true);
   const [fecha, setFecha] = useState(cdmxInicial.fechaStr);
   const [condicionesPago, setCondicionesPago] = useState('');
   const [notas, setNotas] = useState('');
@@ -937,20 +963,38 @@ function NuevaFacturaForm() {
   }, [metodoPago]);
 
   const cargarSiguienteFolio = async (serieActual = serie) => {
-    const res = await fetch(`/api/facturas/siguiente-folio?serie=${encodeURIComponent(serieActual)}`, { cache: 'no-store' });
-    if (!res.ok) return;
-    const data = await res.json();
-    setFolio(data.folio || '01');
+    setFolioLoading(true);
+    try {
+      const res = await fetch(`/api/facturas/siguiente-folio?serie=${encodeURIComponent(serieActual)}`, { cache: 'no-store' });
+      if (!res.ok) {
+        setFolio('');
+        return;
+      }
+      const data = await res.json();
+      setFolio(data.folio || '');
+    } finally {
+      setFolioLoading(false);
+    }
   };
 
   useEffect(() => {
     let cancelled = false;
 
     async function cargarFolioPorSerie() {
-      const res = await fetch(`/api/facturas/siguiente-folio?serie=${encodeURIComponent(serie)}`, { cache: 'no-store' });
-      if (!res.ok || cancelled) return;
-      const data = await res.json();
-      if (!cancelled) setFolio(data.folio || '01');
+      setFolioLoading(true);
+      try {
+        const res = await fetch(`/api/facturas/siguiente-folio?serie=${encodeURIComponent(serie)}`, { cache: 'no-store' });
+        if (!res.ok || cancelled) {
+          if (!cancelled) setFolio('');
+          return;
+        }
+        const data = await res.json();
+        if (!cancelled) setFolio(data.folio || '');
+      } catch {
+        if (!cancelled) setFolio('');
+      } finally {
+        if (!cancelled) setFolioLoading(false);
+      }
     }
 
     cargarFolioPorSerie();
@@ -975,12 +1019,15 @@ function NuevaFacturaForm() {
       productoId: p.id,
       descripcion: p.descripcion || p.nombre,
       claveProdServ: p.claveProdServ,
-      claveUnidad: p.claveUnidad,
-      unidad: p.unidad,
+      claveUnidad: p.requiresHypComplement ? HIDROCARBUROS_UNIDAD.claveUnidad : p.claveUnidad,
+      unidad: p.requiresHypComplement ? HIDROCARBUROS_UNIDAD.unidad : p.unidad,
       precioUnitario: Number(p.precio),
       ivaTasa: Number(p.ivaTasa),
       iepsTasa: Number(p.iepsTasa) || 0,
       objetoImpuesto: p.objetoImpuesto || '02',
+      requiresHypComplement: Boolean(p.requiresHypComplement) || isHidrocarburosClaveProdServ(p.claveProdServ),
+      hypClave: p.hypClave || '',
+      hypSubproducto: p.hypSubproducto || '',
     };
 
     setConceptos(updated);
@@ -996,6 +1043,15 @@ function NuevaFacturaForm() {
 
     if (field === 'descuentoPct' && value > 0) updated[index].descuento = 0;
     if (field === 'descuento' && value > 0) updated[index].descuentoPct = 0;
+    if (field === 'claveProdServ') {
+      const isCombustible = isHidrocarburosClaveProdServ(value);
+      updated[index].requiresHypComplement = isCombustible;
+      if (isCombustible) {
+        updated[index].claveUnidad = HIDROCARBUROS_UNIDAD.claveUnidad;
+        updated[index].unidad = HIDROCARBUROS_UNIDAD.unidad;
+        if (!updated[index].hypClave) updated[index].hypClave = String(value || '');
+      }
+    }
 
     setConceptos(updated);
   };
@@ -1034,6 +1090,7 @@ function NuevaFacturaForm() {
     setFormaPago('03');
     setMetodoPago('PUE');
     setMoneda('MXN');
+    setTipoComprobante('I');
     setTipoCambio(1);
     setSerie(nuevaInfoCDMX.serieStr);
     setFecha(nuevaInfoCDMX.fechaStr);
@@ -1076,6 +1133,7 @@ function NuevaFacturaForm() {
   };
 
   const handleRevisar = async () => {
+    if (!folio.trim()) return alert('No se pudo calcular el siguiente folio. Intenta recargar la pantalla.');
     if (!clienteId) return alert('Selecciona un cliente');
     if (conceptos.some((c) => !c.productoId)) {
       return alert('Todos los conceptos deben tener un producto');
@@ -1083,16 +1141,28 @@ function NuevaFacturaForm() {
     if (conceptos.some((c) => !c.descripcion?.trim())) {
       return alert('Todos los conceptos deben tener descripción');
     }
+    const erroresHyp: string[] = [];
+    conceptos.forEach((c, index) => {
+      if (!requiresHidrocarburosComplement(c)) return;
+      if (!['I', 'E'].includes(tipoComprobante)) erroresHyp.push(`Concepto ${index + 1}: el complemento de hidrocarburos solo aplica en CFDI tipo I o E.`);
+      if (!emisorConfig.hypTipoPermiso) erroresHyp.push('Falta Tipo de Permiso en la configuración fiscal de la empresa.');
+      if (!emisorConfig.hypNumeroPermiso) erroresHyp.push('Falta Número de Permiso vigente.');
+      if (c.claveUnidad !== HIDROCARBUROS_UNIDAD.claveUnidad || c.unidad !== HIDROCARBUROS_UNIDAD.unidad) erroresHyp.push(`Concepto ${index + 1}: el combustible debe facturarse en litros con ClaveUnidad LTR.`);
+      if (!c.hypClave) erroresHyp.push(`Concepto ${index + 1}: falta ClaveHYP del producto.`);
+      if (!c.hypSubproducto) erroresHyp.push(`Concepto ${index + 1}: falta SubProductoHYP del producto.`);
+    });
+    if (erroresHyp.length) return alert(erroresHyp.join('\n'));
 
     setSubmitting(true);
 
     const payload = {
-      serie: 'FAC',
+      serie,
       folio,
       fecha,
       formaPago,
       metodoPago,
       moneda,
+      tipoComprobante,
       tipoCambio,
       condicionesPago,
       notas,
@@ -1116,7 +1186,9 @@ function NuevaFacturaForm() {
       });
 
       if (!resGuardar.ok) {
-        alert('❌ No se pudo guardar el borrador');
+        const errorData = await resGuardar.json().catch(() => ({}));
+        alert(`❌ ${errorData.error || 'No se pudo guardar el borrador'}`);
+        if (resGuardar.status === 409) await cargarSiguienteFolio(serie);
         setSubmitting(false);
         return;
       }
@@ -1131,6 +1203,7 @@ function NuevaFacturaForm() {
         formaPago: dataFactura.formaPago ?? formaPago,
         metodoPago: dataFactura.metodoPago ?? metodoPago,
         moneda: dataFactura.moneda ?? moneda,
+        tipoComprobante: dataFactura.tipoComprobante ?? tipoComprobante,
         subtotal: dataFactura.subtotal ?? subtotal,
         totalIVA: dataFactura.totalIVA ?? totalIVA,
         total: dataFactura.total ?? total,
@@ -1211,6 +1284,7 @@ function NuevaFacturaForm() {
             ...prev,
             estado: dataTimbrar.factura?.estado ?? 'TIMBRADO',
             uuid: uuidFinal,
+            tipoComprobante: dataTimbrar.factura?.tipoComprobante ?? prev.tipoComprobante,
             usoCFDI: dataTimbrar.factura?.usoCFDI ?? prev.usoCFDI,
             client: dataTimbrar.factura?.client ?? prev.client,
             conceptos: dataTimbrar.factura?.conceptos ?? prev.conceptos,
@@ -1276,7 +1350,7 @@ function NuevaFacturaForm() {
           Encabezado
         </h2>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="space-y-1">
             <label className="text-xs font-bold uppercase text-slate-500">
               Serie
@@ -1290,11 +1364,29 @@ function NuevaFacturaForm() {
 
           <div className="space-y-1">
             <label className="text-xs font-bold uppercase text-slate-500">
+              Tipo
+            </label>
+            <select
+              value={tipoComprobante}
+              onChange={(e) => setTipoComprobante(e.target.value)}
+              className="w-full p-2.5 border rounded-xl bg-slate-50 outline-none"
+            >
+              {TIPOS_COMPROBANTE.map((tipo) => (
+                <option key={tipo.clave} value={tipo.clave}>
+                  {tipo.clave} - {tipo.descripcion}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold uppercase text-slate-500">
               Folio
             </label>
             <input
               value={folio}
               readOnly
+              placeholder={folioLoading ? 'Calculando...' : ''}
               className="w-full p-2.5 border rounded-xl bg-slate-100 text-slate-500 outline-none cursor-not-allowed font-bold"
             />
           </div>
@@ -1439,6 +1531,7 @@ function NuevaFacturaForm() {
         <div className="space-y-4">
           {conceptos.map((c, i) => {
             const { importe, iva } = calcularConcepto(c);
+            const requiereHyp = requiresHidrocarburosComplement(c);
 
             return (
               <div
@@ -1472,14 +1565,14 @@ function NuevaFacturaForm() {
                     </label>
                     <input
                       type="number"
-                      min="1"
-                      step="1"
+                      min="0"
+                      step="0.000001"
                       value={c.cantidad}
                       onChange={(e) =>
                         handleConceptoField(
                           i,
                           'cantidad',
-                          parseInt(e.target.value, 10) || 1
+                          e.target.value === '' ? '' : Number(e.target.value)
                         )
                       }
                       className="w-full p-2.5 border rounded-xl bg-white outline-none focus:ring-2 focus:ring-blue-500"
@@ -1491,7 +1584,7 @@ function NuevaFacturaForm() {
                       Precio Unitario
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-2.5 text-slate-400 text-sm">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">
                         $
                       </span>
                       <input
@@ -1505,7 +1598,7 @@ function NuevaFacturaForm() {
                             parseFloat(e.target.value) || 0
                           )
                         }
-                        className="w-full p-2.5 pl-6 border rounded-xl bg-white outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full rounded-xl border bg-white py-2.5 !pl-12 pr-3 outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                   </div>
@@ -1552,10 +1645,16 @@ function NuevaFacturaForm() {
                             <li
                               key={sat.clave}
                               onClick={() => {
-                                handleConceptoField(i, 'claveProdServ', sat.clave);
-                                if (!c.descripcion) {
-                                  handleConceptoField(i, 'descripcion', sat.descripcion);
-                                }
+                                const isCombustible = isHidrocarburosClaveProdServ(sat.clave);
+                                setConceptos((current) => current.map((concepto, idx) => idx === i ? {
+                                  ...concepto,
+                                  claveProdServ: sat.clave,
+                                  descripcion: concepto.descripcion || sat.descripcion,
+                                  requiresHypComplement: isCombustible,
+                                  claveUnidad: isCombustible ? HIDROCARBUROS_UNIDAD.claveUnidad : concepto.claveUnidad,
+                                  unidad: isCombustible ? HIDROCARBUROS_UNIDAD.unidad : concepto.unidad,
+                                  hypClave: isCombustible ? (concepto.hypClave || sat.clave) : concepto.hypClave,
+                                } : concepto));
                                 setCampoActivoSat(null);
                               }}
                               className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-slate-100 last:border-0"
@@ -1579,6 +1678,7 @@ function NuevaFacturaForm() {
                           handleConceptoField(i, 'claveUnidad', e.target.value);
                           buscarClaveSat(e.target.value, 'unidad', i);
                         }}
+                        disabled={requiereHyp}
                         onBlur={() => setTimeout(() => setCampoActivoSat(null), 200)}
                         className="w-full text-xs font-mono bg-white border border-slate-200 p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none uppercase"
                         placeholder="Ej. H87"
@@ -1660,6 +1760,39 @@ function NuevaFacturaForm() {
                       </label>
                       <div className="text-sm font-mono bg-green-50 text-green-700 font-bold p-2 rounded-lg">
                         {fmt(importe)}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {requiereHyp && (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                    <div className="mb-3 text-sm font-bold text-amber-900">
+                      Este concepto requiere Complemento de Hidrocarburos y Petrolíferos.
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold uppercase text-amber-800">ClaveHYP</label>
+                        <input
+                          value={c.hypClave || c.claveProdServ}
+                          onChange={(e) => handleConceptoField(i, 'hypClave', e.target.value.toUpperCase())}
+                          className="w-full p-2.5 border border-amber-200 rounded-xl bg-white outline-none font-mono"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold uppercase text-amber-800">SubProductoHYP</label>
+                        <input
+                          value={c.hypSubproducto || ''}
+                          onChange={(e) => handleConceptoField(i, 'hypSubproducto', e.target.value.toUpperCase())}
+                          placeholder="Ej. SP22"
+                          className="w-full p-2.5 border border-amber-200 rounded-xl bg-white outline-none font-mono"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold uppercase text-amber-800">Unidad obligatoria</label>
+                        <div className="rounded-xl border border-amber-200 bg-white p-2.5 text-sm font-bold text-amber-900">
+                          LTR - Litro
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1792,7 +1925,7 @@ function NuevaFacturaForm() {
 
         <button
           onClick={handleRevisar}
-          disabled={submitting}
+          disabled={submitting || folioLoading || !folio}
           className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl flex items-center gap-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 disabled:opacity-50"
         >
           {submitting ? (

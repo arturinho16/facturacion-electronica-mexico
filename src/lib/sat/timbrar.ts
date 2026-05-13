@@ -5,6 +5,13 @@ import { join } from 'path';
 import { Xslt, XmlParser } from 'xslt-processor';
 import { keyToPem, getNoCertificado, getCertificadoBase64, generarSello } from './firmar';
 import { getActiveConfig, getCsdCredentials } from '@/lib/configuracion';
+import {
+  HIDROCARBUROS_NAMESPACE,
+  HIDROCARBUROS_SCHEMA_LOCATION,
+  appendHidrocarburosComplement,
+  requiresHidrocarburosComplement,
+  validateHidrocarburosConcept,
+} from '@/modules/cfdi-complements/hidrocarburos';
 
 const WSDL_DEMO = 'https://demo-facturacion.finkok.com/servicios/soap/stamp.wsdl';
 const WSDL_PROD = 'https://facturacion.finkok.com/servicios/soap/stamp.wsdl';
@@ -27,6 +34,11 @@ export interface Concepto {
   claveProdServ: string; claveUnidad: string; unidad: string; descripcion: string;
   cantidad: number; precioUnitario: number; descuento: number; importe: number;
   objetoImpuesto: string; ivaTasa: number; iepsTasa: number; ivaImporte: number; iepsImporte: number;
+  requiresHypComplement?: boolean | null;
+  hypClave?: string | null;
+  hypSubproducto?: string | null;
+  hypTipoPermiso?: string | null;
+  hypNumeroPermiso?: string | null;
 }
 
 export interface DatosFactura {
@@ -70,11 +82,17 @@ export function generarXMLUnsigned(datos: DatosFactura, noCertificado: string, c
     throw new Error('Configura el perfil fiscal del emisor antes de timbrar.');
   }
 
+  const hasHidrocarburosComplement = datos.conceptos.some((concepto) => requiresHidrocarburosComplement(concepto));
+  const schemaLocation = hasHidrocarburosComplement
+    ? `http://www.sat.gob.mx/cfd/4 http://www.sat.gob.mx/sitio_internet/cfd/4/cfdv40.xsd ${HIDROCARBUROS_SCHEMA_LOCATION}`
+    : 'http://www.sat.gob.mx/cfd/4 http://www.sat.gob.mx/sitio_internet/cfd/4/cfdv40.xsd';
+
   const root = create({ version: '1.0', encoding: 'UTF-8' })
     .ele('cfdi:Comprobante', {
       'xmlns:cfdi': 'http://www.sat.gob.mx/cfd/4',
       'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance',
-      'xsi:schemaLocation': 'http://www.sat.gob.mx/cfd/4 http://www.sat.gob.mx/sitio_internet/cfd/4/cfdv40.xsd',
+      ...(hasHidrocarburosComplement && { 'xmlns:hidrocarburospetroliferos': HIDROCARBUROS_NAMESPACE }),
+      'xsi:schemaLocation': schemaLocation,
       Version: '4.0',
       Serie: datos.serie.trim(),
       Folio: datos.folio.trim(),
@@ -134,6 +152,11 @@ export function generarXMLUnsigned(datos: DatosFactura, noCertificado: string, c
       if (c.ivaImporte > 0) traslados.ele('cfdi:Traslado', { Base: baseParaImpuestos, Impuesto: '002', TipoFactor: 'Tasa', TasaOCuota: Number(c.ivaTasa).toFixed(6), Importe: Number(c.ivaImporte).toFixed(2) }).up();
       if (c.iepsImporte > 0) traslados.ele('cfdi:Traslado', { Base: baseParaImpuestos, Impuesto: '003', TipoFactor: 'Tasa', TasaOCuota: Number(c.iepsTasa).toFixed(6), Importe: Number(c.iepsImporte).toFixed(2) }).up();
     }
+
+    const hyp = validateHidrocarburosConcept(c, {}, datos.tipoComprobante);
+    if (hyp.errors.length) throw new Error(hyp.errors.join(' '));
+    if (hyp.data) appendHidrocarburosComplement(concepto, hyp.data);
+
     concepto.up();
   }
   conceptosNode.up();

@@ -7,6 +7,7 @@ import { PDFDocument } from 'pdf-lib';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { useInactivityTimeout } from '@/hooks/useInactivityTimeout';
+import { tipoComprobanteLabel } from '@/lib/sat/tipos-comprobante';
 
 const MESES = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -39,6 +40,7 @@ export default function ConsolidadoPage() {
 
         return {
             folio: f.folio, serie: f.serie, fecha: f.fecha, estado: f.estado, uuid: f.uuid || getAttr('UUID'),
+            tipoComprobante: tipoComprobanteLabel(f.tipoComprobante),
             emisor: { nombre: 'OMAR ARTURO CORONA MONROY', rfc: 'COMO891216CM1', direccion: 'Francisco Clavijero 106 Int. 2, Centro', cp: '42000 HIDALGO', regimenFiscal: '626 - Régimen Simplificado de Confianza' },
             receptor: { nombre: f.client.nombreRazonSocial, rfc: f.client.rfc, cp: f.client.cp, usoCfdi: f.usoCFDI || f.client.usoCfdiDefault, regimenFiscal: f.client.regimenFiscal },
             conceptos: f.conceptos.map((c: any) => ({ descripcion: c.descripcion, cantidad: c.cantidad, valorUnitario: c.precioUnitario, importe: (c.cantidad * c.precioUnitario) })),

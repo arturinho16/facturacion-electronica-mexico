@@ -5,6 +5,7 @@ import { Globe, ArrowLeft, Save, Plus, Trash2, Calculator, Info, Loader2, CheckC
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatMoneyMX } from '@/lib/formatos';
+import { tipoComprobanteLabel } from '@/lib/sat/tipos-comprobante';
 
 const fmt = formatMoneyMX;
 const PERIODICIDADES = [
@@ -145,7 +146,13 @@ export default function FacturaGlobalPage() {
           <div className="bg-white px-6 py-3 rounded-2xl border-2 border-indigo-100 shadow-sm text-right"><span className="text-xs font-bold text-slate-400 uppercase block">Total de la Global</span><span className="text-2xl font-black text-indigo-600">{fmt(resumen.total)}</span></div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border-2 border-slate-300 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white p-6 rounded-2xl border-2 border-slate-300 shadow-sm grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="space-y-1">
+            <label className="text-sm font-black text-slate-500 uppercase">Tipo</label>
+            <div className="w-full p-3 border-2 border-slate-200 rounded-xl bg-slate-100 text-slate-500 font-bold">
+              {tipoComprobanteLabel('I')}
+            </div>
+          </div>
           <div className="space-y-1"><label className="text-sm font-black text-slate-500 uppercase">Periodicidad</label><select value={periodicidad} onChange={e => setPeriodicidad(e.target.value)} className="w-full p-3 border-2 border-slate-200 rounded-xl focus:border-indigo-500 outline-none font-bold">{PERIODICIDADES.map(p => <option key={p.c} value={p.c}>{p.d}</option>)}</select></div>
           <div className="space-y-1"><label className="text-sm font-black text-slate-500 uppercase">Mes correspondiente</label><select value={mesSat} onChange={e => setMesSat(e.target.value)} className="w-full p-3 border-2 border-slate-200 rounded-xl focus:border-indigo-500 outline-none font-bold">{MESES.map(m => <option key={m.c} value={m.c}>{m.d}</option>)}</select></div>
           <div className="space-y-1"><label className="text-sm font-black text-slate-500 uppercase">Año</label><select value={anioSat} onChange={e => setAnioSat(Number(e.target.value))} className="w-full p-3 border-2 border-slate-200 rounded-xl focus:border-indigo-500 outline-none font-bold">{ANIOS.map(a => <option key={a} value={a}>{a}</option>)}</select></div>
@@ -177,7 +184,7 @@ export default function FacturaGlobalPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 align-top"><input type="number" min="1" value={t.cantidad || ''} onChange={e => updateTicket(t.id, 'cantidad', e.target.value)} className="w-full p-2 border-2 border-transparent focus:border-indigo-300 rounded-lg outline-none font-mono font-bold text-center" /></td>
-                    <td className="px-4 py-3 align-top"><div className="relative"><span className="absolute left-2 top-2 text-slate-400">$</span><input type="number" placeholder="0.00" value={t.total || ''} onChange={e => updateTicket(t.id, 'total', e.target.value)} className="w-full p-2 pl-6 text-right border-2 border-transparent focus:border-indigo-300 rounded-lg outline-none font-mono font-bold" /></div></td>
+                    <td className="px-4 py-3 align-top"><div className="relative"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span><input type="number" placeholder="0.00" value={t.total || ''} onChange={e => updateTicket(t.id, 'total', e.target.value)} className="w-full p-2 pl-9 text-right border-2 border-transparent focus:border-indigo-300 rounded-lg outline-none font-mono font-bold" /></div></td>
                     <td className="px-4 py-3 text-center align-top pt-5">{tickets.length > 1 && (<button onClick={() => removeTicket(t.id)} className="text-red-300 hover:text-red-600 transition-colors"><Trash2 className="w-5 h-5" /></button>)}</td>
                   </tr>
                 );

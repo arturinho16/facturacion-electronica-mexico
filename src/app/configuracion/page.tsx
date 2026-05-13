@@ -57,6 +57,9 @@ type ConfigFiscal = {
   pacAmbiente?: string;
   pacPassword?: string;
   pacPasswordConfigurado?: boolean;
+  hypEnabled?: boolean;
+  hypTipoPermiso?: string;
+  hypNumeroPermiso?: string;
   folioNominaSerie?: string;
   timbresContratados?: number;
   timbresUsados?: number;
@@ -191,6 +194,9 @@ const emptyConfig: ConfigFiscal = {
   pacAmbiente: 'demo',
   pacPassword: '',
   pacPasswordConfigurado: false,
+  hypEnabled: false,
+  hypTipoPermiso: '',
+  hypNumeroPermiso: '',
   folioNominaSerie: 'NOM',
   timbresContratados: 0,
   timbresUsados: 0,
@@ -229,6 +235,8 @@ const stringConfigKeys: Array<keyof ConfigFiscal> = [
   'pacUsuario',
   'pacAmbiente',
   'pacPassword',
+  'hypTipoPermiso',
+  'hypNumeroPermiso',
   'folioNominaSerie',
   'csdEstatus',
   'csdMensaje',
@@ -267,6 +275,7 @@ function normalizeConfig(data: Partial<ConfigFiscal> = {}): ConfigFiscal {
   normalized.timbresUsados = Math.max(0, Number(normalized.timbresUsados || 0));
   normalized.timbresDisponibles = Math.max(0, Number(normalized.timbresDisponibles ?? normalized.timbresContratados - normalized.timbresUsados));
   normalized.correoSeguro = Boolean(normalized.correoSeguro);
+  normalized.hypEnabled = Boolean(normalized.hypEnabled);
   normalized.pacPasswordConfigurado = Boolean(normalized.pacPasswordConfigurado);
   normalized.correoPasswordConfigurado = Boolean(normalized.correoPasswordConfigurado);
   normalized.aparienciaHeaderColor = normalizeHexColor(normalized.aparienciaHeaderColor);
@@ -289,6 +298,33 @@ function Field({ label, required, children }: { label: string; required?: boolea
     <label className="space-y-1">
       <span className="text-xs font-bold uppercase text-slate-500">{label}{required ? ' *' : ''}</span>
       {children}
+    </label>
+  );
+}
+
+function FilePicker({
+  id,
+  accept,
+  label,
+}: {
+  id: string;
+  accept: string;
+  label: string;
+}) {
+  const [fileName, setFileName] = useState('');
+
+  return (
+    <label className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-sm font-bold text-slate-600 transition hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700">
+      <UploadCloud className="h-4 w-4 shrink-0" />
+      <span className="truncate">{fileName || label}</span>
+      <input
+        id={id}
+        name={id}
+        type="file"
+        accept={accept}
+        className="hidden"
+        onChange={(event) => setFileName(event.target.files?.[0]?.name || '')}
+      />
     </label>
   );
 }
@@ -879,8 +915,8 @@ export default function ConfiguracionPage() {
                       <StatusPill status={String(status || 'SIN_CARGAR')} />
                     </div>
                     <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
-                      <input id={`${tipo}-cer`} name={`${tipo}-cer`} type="file" accept=".cer" className={inputClass} />
-                      <input id={`${tipo}-key`} name={`${tipo}-key`} type="file" accept=".key" className={inputClass} />
+                      <FilePicker id={`${tipo}-cer`} accept=".cer" label="Archivo .CER" />
+                      <FilePicker id={`${tipo}-key`} accept=".key" label="Archivo .KEY" />
                       <input id={`${tipo}-pass`} name={`${tipo}-pass`} type="password" placeholder="Contraseña" autoComplete="new-password" className={inputClass} />
                       <button onClick={() => uploadCert(tipo as 'CSD' | 'FIEL')} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white hover:bg-blue-700"><UploadCloud className="h-4 w-4" /> Guardar {tipo}</button>
                     </div>
@@ -894,6 +930,26 @@ export default function ConfiguracionPage() {
                   <Field label="Proveedor PAC"><input name="pacProveedor" className={inputClass} value={config.pacProveedor ?? 'FINKOK'} onChange={(e) => patchConfig({ pacProveedor: e.target.value })} /></Field>
                   <Field label="Usuario PAC"><input name="pacUsuario" className={inputClass} value={config.pacUsuario ?? ''} onChange={(e) => patchConfig({ pacUsuario: e.target.value })} /></Field>
                   <Field label="Contraseña PAC"><input name="pacPassword" className={inputClass} type="password" autoComplete="new-password" value={config.pacPassword ?? ''} placeholder={config.pacPasswordConfigurado ? 'Guardada, escribir solo para cambiar' : ''} onChange={(e) => patchConfig({ pacPassword: e.target.value, pacPasswordConfigurado: Boolean(e.target.value || config.pacPasswordConfigurado) })} /></Field>
+                </div>
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h3 className="font-bold text-amber-900">Complemento Hidrocarburos y Petrolíferos</h3>
+                      <p className="text-sm text-amber-800">Estos datos se usan solo al facturar gasolina regular, gasolina premium o diésel.</p>
+                    </div>
+                    <label className="inline-flex items-center gap-2 text-sm font-bold text-amber-900">
+                      <input name="hypEnabled" type="checkbox" checked={Boolean(config.hypEnabled)} onChange={(e) => patchConfig({ hypEnabled: e.target.checked })} />
+                      Activar datos HYP
+                    </label>
+                  </div>
+                  <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                    <Field label="Tipo de permiso">
+                      <input name="hypTipoPermiso" className={inputClass} placeholder="Ej. PER07" value={config.hypTipoPermiso ?? ''} onChange={(e) => patchConfig({ hypTipoPermiso: e.target.value.toUpperCase() })} />
+                    </Field>
+                    <Field label="Número de permiso vigente">
+                      <input name="hypNumeroPermiso" className={inputClass} placeholder="Ej. PL/0000/EXP/ES/2026" value={config.hypNumeroPermiso ?? ''} onChange={(e) => patchConfig({ hypNumeroPermiso: e.target.value.toUpperCase() })} />
+                    </Field>
+                  </div>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">

@@ -50,10 +50,10 @@ function LoginForm() {
     <main className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
       <form onSubmit={onSubmit} className="w-full max-w-md space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col items-center text-center">
-          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
+          {/*<div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
             <Image src="/favicon/android-chrome-192x192.png" alt="TuFisTi" width={42} height={42} priority />
-          </div>
-          <p className="mb-3 text-sm font-bold uppercase text-slate-500">{branding.nombreComercial}</p>
+          </div> */}
+          <p className="mb-6 text-sm font-bold uppercase text-slate-800">{branding.nombreComercial}</p>
           <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
             {branding.logoUrl ? (
               <img src={branding.logoUrl} alt="Logo de la empresa" className="h-full w-full object-contain p-2" />

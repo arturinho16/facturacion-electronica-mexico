@@ -23,6 +23,7 @@ import {
 import Link from 'next/link';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
+import { TIPOS_COMPROBANTE, tipoComprobanteLabel } from '@/lib/sat/tipos-comprobante';
 
 async function getEmpresaLogoUrl() {
   const res = await fetch('/api/configuracion', { cache: 'no-store' }).catch(() => null);
@@ -83,6 +84,7 @@ type Factura = {
   formaPago: string;
   metodoPago: string;
   moneda: string;
+  tipoComprobante: string;
   subtotal: number;
   totalIVA: number;
   total: number;
@@ -451,6 +453,7 @@ const buildFacturaData = (f: Factura, emisor: EmpresaEmisorPDF = EMISOR) => {
     moneda: f.moneda ? `${f.moneda} - Peso Mexicano` : 'MXN - Peso Mexicano',
     formaPago: CATALOGO_FORMA_PAGO[f.formaPago] || f.formaPago,
     metodoPago: CATALOGO_METODO_PAGO[f.metodoPago] || f.metodoPago,
+    tipoComprobante: tipoComprobanteLabel(f.tipoComprobante),
     totalLetra: numeroALetra(Number(f.total)),
     ...cfdiExtra,
   };
@@ -551,6 +554,7 @@ export default function FacturasPage() {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('');
+  const [filtroTipo, setFiltroTipo] = useState('');
   const [paginaActual, setPaginaActual] = useState(1);
   const ITEMS_POR_PAGINA = 10;
 
@@ -587,7 +591,7 @@ export default function FacturasPage() {
   useEffect(() => {
     setPaginaActual(1);
     setSeleccionadas([]);
-  }, [q, filtroEstado]);
+  }, [q, filtroEstado, filtroTipo]);
 
   const facturasFiltradas = facturas.filter((f) => {
     const busqueda = q.toLowerCase();
@@ -600,8 +604,9 @@ export default function FacturasPage() {
       f.folio.toLowerCase().includes(busqueda);
 
     const coincideEstado = !filtroEstado || f.estado === filtroEstado;
+    const coincideTipo = !filtroTipo || f.tipoComprobante === filtroTipo;
 
-    return coincideTexto && coincideEstado;
+    return coincideTexto && coincideEstado && coincideTipo;
   });
 
   const totalPaginas = Math.ceil(facturasFiltradas.length / ITEMS_POR_PAGINA);
@@ -967,6 +972,19 @@ export default function FacturasPage() {
             <option value="TIMBRADO">Timbrado</option>
             <option value="CANCELADO">Cancelado</option>
           </select>
+
+          <select
+            value={filtroTipo}
+            onChange={(e) => setFiltroTipo(e.target.value)}
+            className="p-3 border-2 border-slate-200 rounded-xl outline-none text-base bg-white"
+          >
+            <option value="">Todos los tipos</option>
+            {TIPOS_COMPROBANTE.map((tipo) => (
+              <option key={tipo.clave} value={tipo.clave}>
+                {tipo.clave} - {tipo.descripcion}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
@@ -994,6 +1012,7 @@ export default function FacturasPage() {
                   </th>
                   {[
                     'Folio',
+                    'Tipo',
                     'Fecha',
                     'Cliente / RFC',
                     'Total',
@@ -1013,13 +1032,13 @@ export default function FacturasPage() {
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="p-12 text-center text-slate-400">
+                    <td colSpan={8} className="p-12 text-center text-slate-400">
                       <Loader2 className="w-6 h-6 animate-spin mx-auto" />
                     </td>
                   </tr>
                 ) : facturasPaginadas.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="p-12 text-center text-slate-500">
+                    <td colSpan={8} className="p-12 text-center text-slate-500">
                       No se encontraron documentos
                     </td>
                   </tr>
@@ -1063,6 +1082,11 @@ export default function FacturasPage() {
 
                         <td className="px-6 py-4 font-mono font-bold text-blue-700">
                           {f.serie}-{f.folio}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="px-3 py-1 rounded-lg text-sm font-bold bg-slate-100 text-slate-600">
+                            {tipoComprobanteLabel(f.tipoComprobante)}
+                          </span>
                         </td>
                         <td className="px-6 py-4 text-slate-600">
                           {fmtFecha(f.fecha)}
@@ -1175,7 +1199,7 @@ export default function FacturasPage() {
 
                       {expandida === f.id && (
                         <tr className="bg-slate-50/80 border-b border-slate-200">
-                          <td colSpan={7} className="px-8 py-6">
+                          <td colSpan={8} className="px-8 py-6">
                             <div className="space-y-4 max-w-4xl">
                               <div className="text-sm font-bold uppercase text-slate-500 mb-2">
                                 Desglose de Conceptos

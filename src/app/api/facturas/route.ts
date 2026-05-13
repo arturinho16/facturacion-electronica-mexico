@@ -1,7 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getActiveConfig } from '@/lib/configuracion';
 import { normalizarObjetoImp } from '@/lib/sat/timbrar';
+import { normalizarTipoComprobante } from '@/lib/sat/tipos-comprobante';
+import {
+  normalizeHidrocarburosProductInput,
+  validateHidrocarburosFactura,
+} from '@/modules/cfdi-complements/hidrocarburos';
+
+type FacturaConceptoPayload = {
+  productId?: string | null;
+  claveProdServ?: string;
+  noIdentificacion?: string | null;
+  claveUnidad?: string;
+  unidad?: string;
+  descripcion: string;
+  cantidad: number;
+  precioUnitario: number;
+  descuento?: number;
+  objetoImpuesto?: string;
+  ivaTasa: number;
+  iepsTasa?: number;
+  requiresHypComplement?: boolean;
+  hypClave?: string | null;
+  hypSubproducto?: string | null;
+};
 
 // ─── GET /api/facturas ────────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
@@ -12,7 +36,7 @@ export async function GET(req: NextRequest) {
   const hasta = searchParams.get('hasta');
   const q = searchParams.get('q');
 
-  const where: any = {};
+  const where: Prisma.FacturaWhereInput = {};
   if (clientId) where.clientId = clientId;
   if (estado) where.estado = estado;
   if (q) where.OR = [
@@ -42,13 +66,14 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const {
-      folio, fecha, formaPago, metodoPago, moneda, tipoCambio,
+      serie, folio, fecha, formaPago, metodoPago, moneda, tipoCambio,
       condicionesPago, notas, clienteId, usoCFDI,
       retencionIVAPct, retencionISRPct, conceptos, emisorCp,
-      esGlobal, periodicidad, mes, anio, cotizacionId // <-- Añadido soporte para cotizaciones
+      esGlobal, periodicidad, mes, anio, cotizacionId, tipoComprobante // <-- Añadido soporte para cotizaciones
     } = body;
 
-    const serieFinal = esGlobal ? 'FAG' : 'FAC';
+    const serieFinal = esGlobal ? 'FAG' : String(serie || 'FAC').trim() || 'FAC';
+    const tipoComprobanteFinal = esGlobal ? 'I' : normalizarTipoComprobante(tipoComprobante);
     let clienteIdFinal = clienteId;
 
     const config = await getActiveConfig();
@@ -86,15 +111,21 @@ export async function POST(req: NextRequest) {
       clienteIdFinal = clienteGlobal.id;
     }
 
+    const conceptosInput: FacturaConceptoPayload[] = Array.isArray(conceptos) ? conceptos : [];
     let subtotal = 0, totalIVA = 0, totalIEPS = 0, totalDescuento = 0;
+    const productIds = Array.from(new Set(conceptosInput.map((c) => c.productId).filter((id): id is string => Boolean(id))));
+    const productosCatalogo = productIds.length
+      ? await prisma.product.findMany({ where: { id: { in: productIds } } })
+      : [];
+    const productosPorId = new Map(productosCatalogo.map((product) => [product.id, product]));
 
-    for (const c of conceptos) {
+    for (const c of conceptosInput) {
       const objetoImpuesto = normalizarObjetoImp(c.objetoImpuesto);
       const importeConcepto = c.cantidad * c.precioUnitario;
       const baseImpuesto = importeConcepto - (c.descuento || 0);
 
       const iva = objetoImpuesto !== '01' ? baseImpuesto * c.ivaTasa : 0;
-      const ieps = objetoImpuesto !== '01' ? baseImpuesto * c.iepsTasa : 0;
+      const ieps = objetoImpuesto !== '01' ? baseImpuesto * Number(c.iepsTasa || 0) : 0;
 
       subtotal += importeConcepto;
       totalIVA += iva;
@@ -117,19 +148,29 @@ export async function POST(req: NextRequest) {
 
     let factura;
 
-    const conceptosFormateados = conceptos.map((c: any) => {
+    const conceptosFormateados = conceptosInput.map((c) => {
+      const producto = c.productId ? productosPorId.get(c.productId) : null;
+      const claveProdServ = String(c.claveProdServ || producto?.claveProdServ || '').trim();
+      const hyp = normalizeHidrocarburosProductInput({
+        claveProdServ,
+        claveUnidad: c.claveUnidad || producto?.claveUnidad,
+        unidad: c.unidad || producto?.unidad,
+        requiresHypComplement: c.requiresHypComplement ?? producto?.requiresHypComplement,
+        hypClave: c.hypClave || producto?.hypClave,
+        hypSubproducto: c.hypSubproducto || producto?.hypSubproducto,
+      });
       const objetoImpuesto = normalizarObjetoImp(c.objetoImpuesto);
       const importe = c.cantidad * c.precioUnitario;
       const baseImp = importe - (c.descuento || 0);
       const ivaImporte = objetoImpuesto !== '01' ? baseImp * c.ivaTasa : 0;
-      const iepsImporte = objetoImpuesto !== '01' ? baseImp * c.iepsTasa : 0;
+      const iepsImporte = objetoImpuesto !== '01' ? baseImp * Number(c.iepsTasa || 0) : 0;
 
       return {
         productId: c.productId || null,
-        claveProdServ: c.claveProdServ,
+        claveProdServ,
         noIdentificacion: c.noIdentificacion || null,
-        claveUnidad: c.claveUnidad,
-        unidad: c.unidad,
+        claveUnidad: hyp.claveUnidad,
+        unidad: hyp.unidad,
         descripcion: c.descripcion,
         cantidad: c.cantidad,
         precioUnitario: c.precioUnitario,
@@ -140,8 +181,27 @@ export async function POST(req: NextRequest) {
         iepsTasa: c.iepsTasa || 0,
         ivaImporte,
         iepsImporte,
+        requiresHypComplement: hyp.requiresHypComplement,
+        hypClave: hyp.hypClave,
+        hypSubproducto: hyp.hypSubproducto,
+        hypTipoPermiso: hyp.requiresHypComplement ? config?.hypTipoPermiso || null : null,
+        hypNumeroPermiso: hyp.requiresHypComplement ? config?.hypNumeroPermiso || null : null,
       };
     });
+
+    const erroresHyp = validateHidrocarburosFactura({
+      tipoComprobante: tipoComprobanteFinal,
+      emisor: {
+        hypEnabled: config?.hypEnabled,
+        hypTipoPermiso: config?.hypTipoPermiso,
+        hypNumeroPermiso: config?.hypNumeroPermiso,
+      },
+      conceptos: conceptosFormateados,
+    });
+
+    if (erroresHyp.length) {
+      return NextResponse.json({ error: erroresHyp.join(' ') }, { status: 400 });
+    }
 
     if (facturaExistente) {
       // Si la factura ya se timbró en el SAT, bloqueamos cambios
@@ -165,6 +225,7 @@ export async function POST(req: NextRequest) {
           metodoPago,
           moneda,
           tipoCambio,
+          tipoComprobante: tipoComprobanteFinal,
           condicionesPago: condicionesPago || null,
           notas: notas || null,
           clientId: clienteIdFinal,
@@ -202,6 +263,7 @@ export async function POST(req: NextRequest) {
           metodoPago,
           moneda,
           tipoCambio,
+          tipoComprobante: tipoComprobanteFinal,
           condicionesPago: condicionesPago || null,
           notas: notas || null,
           clientId: clienteIdFinal,
@@ -231,9 +293,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(factura, { status: 201 });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('❌ Error al crear/actualizar factura:', err);
-    if (err.code === 'P2002') return NextResponse.json({ error: 'Ya existe una factura con esa serie y folio' }, { status: 409 });
-    return NextResponse.json({ error: err.message || 'Error interno' }, { status: 500 });
+    if (typeof err === 'object' && err && 'code' in err && err.code === 'P2002') return NextResponse.json({ error: 'Ya existe una factura con esa serie y folio' }, { status: 409 });
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Error interno' }, { status: 500 });
   }
 }

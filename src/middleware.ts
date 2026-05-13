@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth/jwt';
 import { isRootSuperUser, roleHasAllModules } from '@/lib/auth/permissions';
 
+const EXPEDIENTE_FISCAL_ENABLED = false;
+
 const routeModuleMap: Array<{ prefix: string; modulo: string }> = [
   { prefix: '/nomina', modulo: 'nomina' },
   { prefix: '/empleados', modulo: 'nomina' },
@@ -12,6 +14,8 @@ const routeModuleMap: Array<{ prefix: string; modulo: string }> = [
   { prefix: '/catalogos/clientes', modulo: 'clientes' },
   { prefix: '/catalogos/productos', modulo: 'productos' },
   { prefix: '/api/facturas-recibidas/consolidado', modulo: 'consolidado_recibidas' },
+  { prefix: '/api/expediente-fiscal', modulo: 'expediente_fiscal' },
+  { prefix: '/expediente-fiscal', modulo: 'expediente_fiscal' },
   { prefix: '/facturas-recibidas/consolidado', modulo: 'consolidado_recibidas' },
   { prefix: '/facturas-recibidas', modulo: 'descargas_sat' },
   { prefix: '/configuracion', modulo: 'configuracion' },
@@ -20,6 +24,14 @@ const routeModuleMap: Array<{ prefix: string; modulo: string }> = [
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  if (!EXPEDIENTE_FISCAL_ENABLED && (pathname.startsWith('/expediente-fiscal') || pathname.startsWith('/api/expediente-fiscal'))) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'El modulo de expediente fiscal esta pausado.' }, { status: 404 });
+    }
+
+    return NextResponse.redirect(new URL('/', req.url));
+  }
 
   if (pathname.startsWith('/login') || pathname.startsWith('/api/auth/login')) return NextResponse.next();
 

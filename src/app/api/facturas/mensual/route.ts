@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
@@ -8,17 +9,19 @@ export async function GET(req: NextRequest) {
     const skip = parseInt(searchParams.get('skip') || '0', 10);
     const take = parseInt(searchParams.get('take') || '50', 10);
     const countOnly = searchParams.get('countOnly') === 'true';
+    const tipoComprobante = searchParams.get('tipoComprobante')?.trim().toUpperCase();
 
     try {
         // Definir el rango del mes
         const fechaInicio = new Date(anio, mes, 1).toISOString();
         const fechaFin = new Date(anio, mes + 1, 0, 23, 59, 59).toISOString();
 
-        const whereClause = {
+        const whereClause: Prisma.FacturaWhereInput = {
             fecha: { gte: fechaInicio, lte: fechaFin },
             estado: 'TIMBRADO', // Solo facturas válidas
             xmlTimbrado: { not: null }
         };
+        if (tipoComprobante) whereClause.tipoComprobante = tipoComprobante;
 
         // Si solo queremos saber cuántas hay en total para calcular la barra de progreso
         if (countOnly) {

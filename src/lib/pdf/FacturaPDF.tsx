@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Image,
 } from '@react-pdf/renderer';
+import { tipoComprobanteNombre } from '@/lib/sat/tipos-comprobante';
 
 const toNumber = (value: unknown, fallback = 0) => {
   const parsed = Number(value);
@@ -127,6 +128,7 @@ interface FacturaPDFProps {
 export const FacturaPDF: React.FC<FacturaPDFProps> = ({ factura, logoUrl }) => {
   const esBorrador = factura.estado === 'BORRADOR';
   const serie = factura.serie ?? '';
+  const tituloComprobante = tipoComprobanteNombre(factura.tipoComprobante).toUpperCase();
 
   return (
     <Document>
@@ -134,7 +136,7 @@ export const FacturaPDF: React.FC<FacturaPDFProps> = ({ factura, logoUrl }) => {
         {esBorrador && <Text style={styles.watermark}>BORRADOR</Text>}
 
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-          <Text style={styles.facturaLabel}>FACTURA</Text>
+          <Text style={styles.facturaLabel}>{tituloComprobante}</Text>
           <Text style={styles.folioLabel}>FOLIO:{'   '}{serie}{factura.folio}</Text>
         </View>
 

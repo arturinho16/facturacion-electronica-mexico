@@ -379,8 +379,8 @@ export default function NuevaCotizacionPage() {
                     <div className="space-y-1">
                       <label className="text-xs font-bold uppercase text-slate-500">Precio Unitario</label>
                       <div className="relative">
-                        <span className="absolute left-3 top-2.5 text-slate-400 text-sm">$</span>
-                        <input type="number" step="0.000001" value={c.precioUnitario} onChange={e => handleConceptoField(i, 'precioUnitario', parseFloat(e.target.value) || 0)} className="w-full p-2.5 pl-6 border rounded-xl bg-white outline-none focus:ring-2 focus:ring-blue-500" />
+                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">$</span>
+                        <input type="number" step="0.000001" value={c.precioUnitario} onChange={e => handleConceptoField(i, 'precioUnitario', parseFloat(e.target.value) || 0)} className="w-full p-2.5 pl-9 border rounded-xl bg-white outline-none focus:ring-2 focus:ring-blue-500" />
                       </div>
                     </div>
                   </div>

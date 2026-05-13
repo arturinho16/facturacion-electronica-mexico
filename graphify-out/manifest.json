@@ -1,0 +1,690 @@
+{
+  "/home/arturcm/facturacion-electronica-mexico/semilla-sat.sql": {
+    "mtime": 1778096663.8479235,
+    "hash": "d6a75a3e34d4c73f4fd1184ea0cad2ba"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/next.config.ts": {
+    "mtime": 1778096663.823687,
+    "hash": "e207d01e69ba4dfa8df9f79f9bff8432"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/postcss.config.mjs": {
+    "mtime": 1778096663.8252668,
+    "hash": "ef3ba2a81ba19f8ea5ddf625521e96f0"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/tailwind.config.js": {
+    "mtime": 1778096663.868006,
+    "hash": "f38120ac71ab4b6761dcd872d0685384"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/eslint.config.mjs": {
+    "mtime": 1778096663.823687,
+    "hash": "dfa1f5f6a7037bf39dc510f30b180002"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/next-env.d.ts": {
+    "mtime": 1778192627.2857008,
+    "hash": "d0f8375ae1199dc7acd3977fc33b78b8"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/prisma.config.ts": {
+    "mtime": 1778176418.2423162,
+    "hash": "417fd834ea5e4eda1dbd043894d8c04a"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/middleware.ts": {
+    "mtime": 1778181353.1353016,
+    "hash": "bf1db89e53e2912d48f9919b51094e8a"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/types/ssh2-sftp-client.d.ts": {
+    "mtime": 1778096663.868006,
+    "hash": "1c8b03d53d81572537271112c8fa121d"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/layout.tsx": {
+    "mtime": 1778179729.5421834,
+    "hash": "8e5e4272a14c0a4325f9b8f0ee8636de"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/page.tsx": {
+    "mtime": 1778180125.2545435,
+    "hash": "471d5c2cb0c0f9e23f0e91c8413d0145"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/calculadoras/page.tsx": {
+    "mtime": 1778186639.600939,
+    "hash": "5140130f5b284c145e151fbd7401d3a3"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/catalogos/productos/page.tsx": {
+    "mtime": 1778096663.8576326,
+    "hash": "26602fdf2938ae81f8ce5401709e43fb"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/catalogos/clientes/page.tsx": {
+    "mtime": 1778096663.8574047,
+    "hash": "a440bcdc8d42bde238dbfc2e58dd8022"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/facturas/page.tsx": {
+    "mtime": 1778176852.8626554,
+    "hash": "0a19065f728962a2825ccbc9e83c3b42"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/facturas/global/page.tsx": {
+    "mtime": 1778096663.8597689,
+    "hash": "fef1dc45b56d798da90af2f2ba47beb4"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/facturas/consolidado/page.tsx": {
+    "mtime": 1778176838.0630128,
+    "hash": "c86578dab107052b6e1ce4b2ea2ac568"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/facturas/nueva/page.tsx": {
+    "mtime": 1778176844.5917437,
+    "hash": "5d1ac1d4fbc41c24f33ba51bf6e14899"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/cotizaciones/page.tsx": {
+    "mtime": 1778096663.8585541,
+    "hash": "9455dc2af85398caf2c543d534e60b2c"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/cotizaciones/[id]/editar/page.tsx": {
+    "mtime": 1778096663.8581228,
+    "hash": "0d7e2c1929e2b415b57f6b51a96cad6c"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/cotizaciones/nueva/page.tsx": {
+    "mtime": 1778096663.8583555,
+    "hash": "661024f7f7b3edebff3793ec46bd18e7"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/sin-permiso/page.tsx": {
+    "mtime": 1778096663.8618197,
+    "hash": "6388bbf381ce30422a36fea06d240cb9"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/login/page.tsx": {
+    "mtime": 1778192065.4274304,
+    "hash": "5c16c4f07359653ab3e6533c157d1749"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/configuracion/page.tsx": {
+    "mtime": 1778192174.3307805,
+    "hash": "d3801c37a17076429cc6339547682a15"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/products/route.ts": {
+    "mtime": 1778096663.8567035,
+    "hash": "81af97238a05149302bd7b7cd22c8cee"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/products/[id]/route.ts": {
+    "mtime": 1778096663.8565478,
+    "hash": "b85f9b493ca55b35a377bd0757fb04d6"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/products/bulk/route.ts": {
+    "mtime": 1778096663.8566368,
+    "hash": "279efa38594a03374469bdefc75d4066"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/clients/route.ts": {
+    "mtime": 1778096663.8490224,
+    "hash": "0535bc86912d53e6a63b048b9dbaf227"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/clients/[id]/route.ts": {
+    "mtime": 1778096663.8488476,
+    "hash": "dc0d002dcdc5781b0208e3365c772926"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/clients/parse-cif/route.ts": {
+    "mtime": 1778096663.8490224,
+    "hash": "e827c2d51ebbe81534fa5e72a079215c"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/facturas/route.ts": {
+    "mtime": 1778096663.8549573,
+    "hash": "fc9c21c1e0c287494936b75a7bfe4016"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/facturas/[id]/cancelar/route.ts": {
+    "mtime": 1778096663.8542848,
+    "hash": "39c1e7f22ab2727a1348623b7a5d45e1"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/facturas/[id]/timbrar/route.ts": {
+    "mtime": 1778192532.989107,
+    "hash": "37a045009f816d9049a53714bae206e6"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/facturas/[id]/enviar/route.ts": {
+    "mtime": 1778096663.8545668,
+    "hash": "3dfdfd47e0ce5792b3f4c697b1ec1e40"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/facturas/mensual/route.ts": {
+    "mtime": 1778096663.854847,
+    "hash": "29001ef671f154db1c0e1857dc85a8c2"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/facturas/mensual/enviar/route.ts": {
+    "mtime": 1778096663.8547676,
+    "hash": "c981e64497dcc89f12471184ab3ee97b"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/facturas/siguiente-folio/route.ts": {
+    "mtime": 1778096663.8549573,
+    "hash": "020f0373e32a5494817a5fa5361699eb"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/cotizaciones/route.ts": {
+    "mtime": 1778096663.8521826,
+    "hash": "cf49ec3efdc0924d574059062b74cb5a"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/cotizaciones/[id]/route.ts": {
+    "mtime": 1778096663.8521826,
+    "hash": "ca1ceb0115d6b02247dd425e7e07aac2"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/cotizaciones/siguiente-folio/route.ts": {
+    "mtime": 1778096663.8521826,
+    "hash": "97a55d55504cf4999f7ffec96b42479c"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/timbrado-masivo/route.ts": {
+    "mtime": 1778192145.6286318,
+    "hash": "69ec87c425630ae061fc7916b9eb0eb3"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/sat/claves/route.ts": {
+    "mtime": 1778096663.8568907,
+    "hash": "112fba9ee7f2203dfae9ebf3830f026b"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/sat/busqueda/route.ts": {
+    "mtime": 1778096663.8567035,
+    "hash": "a69304d2ef01699ecfc81d5fa4e329bc"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/public/branding/route.ts": {
+    "mtime": 1778179724.1165557,
+    "hash": "5d720d0f5b3e2210b888c25e5e58ebf7"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/configuracion/route.ts": {
+    "mtime": 1778192186.4142644,
+    "hash": "efdc8d239de7cf660a8f64e63d19b2f1"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/configuracion/apariencia/route.ts": {
+    "mtime": 1778179705.023798,
+    "hash": "0ba58c8ee92c51910e5c26134651dd02"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/configuracion/reinicializar-bd/route.ts": {
+    "mtime": 1778096663.8499985,
+    "hash": "733c511c47ea458e7f4093f0096f62f0"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/configuracion/certificados/route.ts": {
+    "mtime": 1778096663.8493013,
+    "hash": "204f978362eaf8cad67f7664b3faca61"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/configuracion/respaldo/route.ts": {
+    "mtime": 1778096663.8518896,
+    "hash": "358998cae58c8aaafd4b83305f4b010b"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/configuracion/respaldo/restaurar/route.ts": {
+    "mtime": 1778096663.851818,
+    "hash": "cb0372b379991578185ca92108b36143"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/configuracion/respaldo/descargar/route.ts": {
+    "mtime": 1778096663.850488,
+    "hash": "c0d8062dd4bcdc0acc9a57e59dee5e43"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/configuracion/respaldo/drive/subir/route.ts": {
+    "mtime": 1778096663.8511012,
+    "hash": "989e484a9e916c29199672e78d70f5d6"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/configuracion/respaldo/drive/login/route.ts": {
+    "mtime": 1778096663.85099,
+    "hash": "5f06c4d99eb530a0d00671f39daeba6a"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/configuracion/respaldo/drive/callback/route.ts": {
+    "mtime": 1778096663.8507702,
+    "hash": "77b0b1780f7ad842143e709caf4efb43"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/configuracion/respaldo/onedrive/subir/route.ts": {
+    "mtime": 1778096663.8511012,
+    "hash": "3df043139a6de53b2c413d03065cd673"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/configuracion/respaldo/onedrive/login/route.ts": {
+    "mtime": 1778096663.8511012,
+    "hash": "58ddfca50be7ef7b8e66b0b95eb9b56b"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/configuracion/respaldo/onedrive/callback/route.ts": {
+    "mtime": 1778096663.8511012,
+    "hash": "8968ce42466ba885c3b297716d982ac0"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/configuracion/respaldo/programacion/route.ts": {
+    "mtime": 1778096663.8517106,
+    "hash": "2a8c4f1048cccdf1b22eef6f2e8d8f20"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/configuracion/respaldo/sftp/probar/route.ts": {
+    "mtime": 1778096663.8518896,
+    "hash": "08384a70b3764770fe6ceb05c160ec8f"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/configuracion/respaldo/sftp/subir/route.ts": {
+    "mtime": 1778096663.8518896,
+    "hash": "013379e7389085c4c28e4a69cae5b8b7"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/configuracion/respaldo/historial/route.ts": {
+    "mtime": 1778096663.8511012,
+    "hash": "217411bf3d0d1ebe6eea2d678046062f"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/configuracion/respaldo/bd/restaurar/route.ts": {
+    "mtime": 1778096663.8503993,
+    "hash": "44dece15b09f008738aa36055605c227"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/configuracion/respaldo/bd/descargar/route.ts": {
+    "mtime": 1778096663.8502853,
+    "hash": "0207d7c81f758097a82faab70224640b"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/configuracion/correo/probar/route.ts": {
+    "mtime": 1778096663.8494382,
+    "hash": "8633a0935587e63aed40d0b987f76f80"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/facturas-recibidas/route.ts": {
+    "mtime": 1778111348.5649643,
+    "hash": "b15ce2d8a244b4ee15ebc9d4a51eaa6d"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/facturas-recibidas/verificar/route.ts": {
+    "mtime": 1778113160.1234758,
+    "hash": "3f4b8dd30d549267c93e31382095d591"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/facturas-recibidas/sesion/route.ts": {
+    "mtime": 1778108450.9225996,
+    "hash": "3eb71014e5cdd413ca8f2f1cd62fb15f"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/facturas-recibidas/manual/route.ts": {
+    "mtime": 1778111616.2395113,
+    "hash": "aa26e320ece9bee2250709adb75db5dd"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/facturas-recibidas/consolidado/route.ts": {
+    "mtime": 1778111411.549722,
+    "hash": "061719dadbe8b42e741f874a51e79892"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/facturas-recibidas/enviar/route.ts": {
+    "mtime": 1778111373.787072,
+    "hash": "285c6123365238af6a4e9bc190424ea3"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/facturas-recibidas/solicitudes/route.ts": {
+    "mtime": 1778108513.1953268,
+    "hash": "256fdd36d1c607de2080b216b5251f08"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/empleados/route.ts": {
+    "mtime": 1778096663.853524,
+    "hash": "c314d7b521ccca56086c9c82b69149a0"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/empleados/[id]/route.ts": {
+    "mtime": 1778096663.8530524,
+    "hash": "6f946433235bedba1bcd664bedede068"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/usuarios/route.ts": {
+    "mtime": 1778176688.8464978,
+    "hash": "e12a2248506b37267a38332598539c47"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/usuarios/[id]/route.ts": {
+    "mtime": 1778096663.8571634,
+    "hash": "319cf085a602e364009791b5faa2d009"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/usuarios/[id]/reset-password/route.ts": {
+    "mtime": 1778096663.8570838,
+    "hash": "fb698bde2bb4c2b060edf2d50ac76f29"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/auth/login/route.ts": {
+    "mtime": 1778181270.3029306,
+    "hash": "c822912dd8181524cfbeeb946f2f3b45"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/auth/logout/route.ts": {
+    "mtime": 1778096663.8487408,
+    "hash": "fbc02d5d10d8086238f74d5f446cef1e"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/nomina/wizard/periodo/route.ts": {
+    "mtime": 1778096663.855407,
+    "hash": "5251e771623afc8bcdbd8e0048d75599"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/nomina/wizard/validar/route.ts": {
+    "mtime": 1778096663.8564587,
+    "hash": "75c6268215c0e24b8f6ae4085a9c690b"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/nomina/wizard/timbrar-masivo/route.ts": {
+    "mtime": 1778192135.7692378,
+    "hash": "3397ad7b1fc076941c01fb6571095c14"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/nomina/wizard/finalizar/route.ts": {
+    "mtime": 1778096663.8551862,
+    "hash": "ca4884096d24bba7ffad30b86e480882"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/nomina/wizard/historial/route.ts": {
+    "mtime": 1778096663.8552904,
+    "hash": "89c5e5f4d81333d76b58c0bd3211bd51"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/api/nomina/wizard/preview/route.ts": {
+    "mtime": 1778096663.8559384,
+    "hash": "f6ced633400701c9de4ed4727d9cedfa"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/facturas-recibidas/page.tsx": {
+    "mtime": 1778176859.7451048,
+    "hash": "4b4a7b4b9b21c8878e62683e262836c3"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/facturas-recibidas/perfil-2/page.tsx": {
+    "mtime": 1778107244.7477086,
+    "hash": "43c9d460e2c1d1dd97b665425011908c"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/facturas-recibidas/perfil-1/page.tsx": {
+    "mtime": 1778107240.4575348,
+    "hash": "43c9d460e2c1d1dd97b665425011908c"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/facturas-recibidas/consolidado/page.tsx": {
+    "mtime": 1778176863.4321134,
+    "hash": "6ffa7eb41abfa3455f2d8855a7b58622"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/facturas-recibidas/perfil-3/page.tsx": {
+    "mtime": 1778107248.7158692,
+    "hash": "43c9d460e2c1d1dd97b665425011908c"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/empleados/page.tsx": {
+    "mtime": 1778096663.8590019,
+    "hash": "88767951323addf58eb8b3513478b300"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/empleados/[id]/editar/page.tsx": {
+    "mtime": 1778096663.8587604,
+    "hash": "f45a5ade0927f39f60b50993930dc160"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/empleados/nuevo/page.tsx": {
+    "mtime": 1778096663.8588605,
+    "hash": "0035027997065e8bf60f219adc1f59d5"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/nomina/facturacion-masiva/page.tsx": {
+    "mtime": 1778096663.8611252,
+    "hash": "d15869cca4c88696669c5ad0d0c8e9c0"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/nomina/facturacion-masiva/utils/generarXMLNomina.ts": {
+    "mtime": 1778096663.8612835,
+    "hash": "c56226654c3930ef08be1e6688506fe9"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/nomina/facturacion-masiva/utils/validarXMLNomina.ts": {
+    "mtime": 1778096663.8614688,
+    "hash": "00e7b227349f2a8191a5bbc0a777aa32"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/nomina/facturacion-masiva/components/ProgressBar.tsx": {
+    "mtime": 1778096663.8608668,
+    "hash": "51be88e999d2e6ef0180972084cf4935"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/app/nomina/facturacion-masiva/components/NominaWizard.tsx": {
+    "mtime": 1778096663.8608668,
+    "hash": "fe79941c8775f726eb5ae08940adcf18"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/prisma.ts": {
+    "mtime": 1778096663.8657875,
+    "hash": "799dc0e75e4042fa25ebccd81ec30ac3"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/respaldo.ts": {
+    "mtime": 1778113119.053834,
+    "hash": "5cf36896f9ee04f7a40d3b188aa5543b"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/folios.ts": {
+    "mtime": 1778096663.8621755,
+    "hash": "943361687285a300aa018a787463593a"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/formatos.ts": {
+    "mtime": 1778096663.8621755,
+    "hash": "32caa2c22680f09dbad453ad139603cb"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/configuracion.ts": {
+    "mtime": 1778192103.078849,
+    "hash": "728f5b190142ee4da45b930ed94b34fc"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/pdf/NominaPDF.tsx": {
+    "mtime": 1778096663.8650527,
+    "hash": "d4b5fdb0c6c8ea4f971a1a9e1f4d1b68"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/pdf/FacturaPDF.tsx": {
+    "mtime": 1778096663.8640528,
+    "hash": "670ceed1444da4e1132798af3d3c41db"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/backups/onedrive.ts": {
+    "mtime": 1778096663.8621755,
+    "hash": "77d2c660cdd16a8a89b1a84dc71e225d"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/backups/database-dump.ts": {
+    "mtime": 1778096663.8621755,
+    "hash": "65ceaafa84b52ff59de1a2df82cdc286"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/backups/google-drive.ts": {
+    "mtime": 1778096663.8621755,
+    "hash": "abcaaddd8bf0280f9dadae79c050caf4"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/backups/sftp.ts": {
+    "mtime": 1778176317.5092776,
+    "hash": "faf8140ac789ce833b953fe73e87bfce"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/backups/executor.ts": {
+    "mtime": 1778096663.8621755,
+    "hash": "d9fe78df6f4e871bbb1f911fb4c3ff93"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/backups/scheduler.ts": {
+    "mtime": 1778096663.8621755,
+    "hash": "ed6b2278b39cf3187b4220c3caf9c6e8"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/sat/facturas-recibidas-cron.ts": {
+    "mtime": 1778108445.9566436,
+    "hash": "fd5d4812bfb37d578eaba71c814b381d"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/sat/session-store.ts": {
+    "mtime": 1778106784.5630443,
+    "hash": "ab7847c8a3f020ef2055b74c16ff25ad"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/sat/cadenaOriginal.ts": {
+    "mtime": 1778096663.8661687,
+    "hash": "42ffdf5ccd719b69b350a8a4a668a485"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/sat/firmar.ts": {
+    "mtime": 1778096663.8666909,
+    "hash": "4720977ac246c5ff3d619b98fa22162d"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/sat/perfiles.ts": {
+    "mtime": 1778111201.447396,
+    "hash": "0be9f60d049cdae014b7ab7ee0c189af"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/sat/catalogos.ts": {
+    "mtime": 1778096663.8662755,
+    "hash": "3b413725abd3c4bfeddf8ad6824439f2"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/sat/timbrar.ts": {
+    "mtime": 1778096663.867241,
+    "hash": "5954ee499d61c844114a018dc2fd9bc2"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/sat/timbrarNominaFinkok.ts": {
+    "mtime": 1778096663.867241,
+    "hash": "084d4204656ae08c26d8ce3f12548b85"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/sat/descarga-masiva/index.ts": {
+    "mtime": 1778096663.8665075,
+    "hash": "2a3536243dba9fddd089f154b20236ca"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/auth/permissions.ts": {
+    "mtime": 1778181340.7727988,
+    "hash": "40fbb531df3011e634406c98154590f8"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/auth/session-server.ts": {
+    "mtime": 1778181348.321106,
+    "hash": "588d3ae502b1c3ee29ad0420c6b1a44e"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/auth/jwt.ts": {
+    "mtime": 1778096663.8618197,
+    "hash": "688d9a94c8aac5020c29f37b2ad08b19"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/nomina/types.ts": {
+    "mtime": 1778096663.8640528,
+    "hash": "0f2878071b238b7e6d7572d4e058b5f5"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/nomina/pac.ts": {
+    "mtime": 1778096663.8640528,
+    "hash": "e80fa519cd4baff557c9a54f840b20e4"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/nomina/armado.ts": {
+    "mtime": 1778096663.8640528,
+    "hash": "f0eb383028b6e8ee18c065f78f7a761f"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/nomina/catalogos.ts": {
+    "mtime": 1778096663.8640528,
+    "hash": "c8ee81e34b1e3728e40d599a0750c275"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/nomina/sellado.ts": {
+    "mtime": 1778096663.8640528,
+    "hash": "19a785c94866ca57005df721d2650a6c"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/nomina/reglas-sat.ts": {
+    "mtime": 1778096663.8640528,
+    "hash": "f261579e655cfe3f68486a32137a5b88"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/nomina/calculo.ts": {
+    "mtime": 1778096663.8640528,
+    "hash": "f0eddd17ba6949a4f88b2229afd698ba"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/components/shared/Card.tsx": {
+    "mtime": 1778175968.2372928,
+    "hash": "1d25b6d410ebfa4d3a149317a0baba24"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/components/shared/Button.tsx": {
+    "mtime": 1778175974.9125597,
+    "hash": "7e61e19aae295321b02cdbf62f984af6"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/components/shared/StatusBadge.tsx": {
+    "mtime": 1778096663.8618197,
+    "hash": "4bd080811ad751b25c56388d146d2857"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/hooks/useInactivityTimeout.ts": {
+    "mtime": 1778096663.8618197,
+    "hash": "50d24234ba62e04006763bd13b7ae288"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/prisma/seed.ts": {
+    "mtime": 1778181292.1197546,
+    "hash": "2388d64f29e6f42d070f41f4cc86e46b"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/README.md": {
+    "mtime": 1778096663.7971787,
+    "hash": "6a5ea0e6883b88c90b11158e8d170c2c"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/updateclaves-satproduyunidadmedia.txt": {
+    "mtime": 1778096663.868006,
+    "hash": "2d3abdc2470876a2b3be21930e014116"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/docs/reglas-sat-nomina.md": {
+    "mtime": 1778096663.823687,
+    "hash": "8d59d6972c01f2b2b45d5b570ead2c08"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/src/lib/sat/certificados/CSD/certificado_base64.txt": {
+    "mtime": 1778096663.8663766,
+    "hash": "431d0ff707183005e9b57f6432e2f0c2"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/Wiki-nomina/Secuencia de cadena original (XSLT).txt": {
+    "mtime": 1778096663.7975018,
+    "hash": "b2eb878fd4555d3922a2620f0000f379"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/almacen_facturas/_metadata/2026/FC88400B-4AFD-411B-A20A-A3D91AFF4D97_01.txt": {
+    "mtime": 1778096663.823477,
+    "hash": "37b95ceb13f0365a8c9c9173b5ee2a22"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/validacion-xml/Nomina-250525-8cc158e3.pdf": {
+    "mtime": 1778096663.8784277,
+    "hash": "9941f5b85ed69739c6491fee54f22063"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/validacion-xml/Recibo_CORONA_MONROY.PDF": {
+    "mtime": 1778096663.8791454,
+    "hash": "1e92b4b013ff8604c1ffe0dfaf006d31"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/validacion-xml/Guia_llenado_Nomina.pdf": {
+    "mtime": 1778096663.8761075,
+    "hash": "ec1d2eb21a39587bffebe22a117c12c8"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/Wiki-nomina/guia de llenado.pdf": {
+    "mtime": 1778096663.810739,
+    "hash": "04b819ea805e15322b29c14cfe297b56"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/Wiki-nomina/estandar_nomina12_f8dc822bb2.pdf": {
+    "mtime": 1778096663.8030562,
+    "hash": "6844cfe4f4e022f8d4f9317c128ead53"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/calculadoras/arrendamiento de inmuebles.png": {
+    "mtime": 1778182711.612307,
+    "hash": "7d5493c5c8c77d6b77621e4d61a578d9"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/calculadoras/correcion-finiquito.png": {
+    "mtime": 1778186061.8351178,
+    "hash": "d208fefd56decf383a33c554956b3cb3"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/calculadoras/correcion-liquidacion.png": {
+    "mtime": 1778186061.8351178,
+    "hash": "6cacda046e6573f7ed2984b65ada6ae3"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/calculadoras/correcion-sueldo.png": {
+    "mtime": 1778186061.8281176,
+    "hash": "613f941381b844e91ad442af7b36aca8"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/calculadoras/correcion-aguinaldo.png": {
+    "mtime": 1778186061.8291175,
+    "hash": "1ac8cd0cc772fbd5cb13f99df3e1ad0d"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/calculadoras/correcion-isr.png": {
+    "mtime": 1778186061.840118,
+    "hash": "5d551138897a38e51f8118dd9008acbe"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/calculadoras/sueldo(bruto y neto).png": {
+    "mtime": 1778182711.6013064,
+    "hash": "8c13318c246140745b2a44af7c3d03be"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/calculadoras/coreccion-PTU.png": {
+    "mtime": 1778186061.8361177,
+    "hash": "621a4e4caa2971aaa7d5913d177d057a"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/calculadoras/finiquito.png": {
+    "mtime": 1778182711.6023066,
+    "hash": "2997d1e7bb7660c7d74eb317379f7a12"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/calculadoras/ISR.png": {
+    "mtime": 1778182711.6053066,
+    "hash": "db7067135ab7829904fbef7d07f5a0dc"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/calculadoras/liquidacion.png": {
+    "mtime": 1778182711.6023066,
+    "hash": "bcca97468368f5852d6826078b7b10d6"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/calculadoras/ptu.png": {
+    "mtime": 1778182711.6073067,
+    "hash": "01cbec9002e0e10f1a7d52d54fbdbb72"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/validacion-xml/xml-valido.png": {
+    "mtime": 1778096663.8829026,
+    "hash": "bcbf8476ca6262f65c35071ec4ad364e"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/validacion-xml/xml-mal-formado.png": {
+    "mtime": 1778096663.8812115,
+    "hash": "6c2893539c63685b83ce48ea10c2ac10"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/public/logo-tufisti.png": {
+    "mtime": 1778096663.82685,
+    "hash": "5b079ba00934604d43337b0f49f5670b"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/public/next.svg": {
+    "mtime": 1778096663.8269172,
+    "hash": "8e061864f388b47f33a1c3780831193e"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/public/window.svg": {
+    "mtime": 1778096663.8272517,
+    "hash": "a2760511c65806022ad20adf74370ff3"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/public/tufisti-circular.png": {
+    "mtime": 1778096663.8272517,
+    "hash": "c346bc31e37d1e48cb8ac8b113c9a98a"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/public/globe.svg": {
+    "mtime": 1778096663.8267438,
+    "hash": "2aaafa6a49b6563925fe440891e32717"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/public/vercel.svg": {
+    "mtime": 1778096663.8272517,
+    "hash": "c0af2f507b369b085b35ef4bbe3bcf1e"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/public/file.svg": {
+    "mtime": 1778096663.8266106,
+    "hash": "d09f95206c3fa0bb9bd9fefabfd0ea71"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/public/logo facturador.png": {
+    "mtime": 1778181863.9850268,
+    "hash": "b5d7a32cd516f5adac8d3c67627f9a02"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/public/favicon/favicon-32x32.png": {
+    "mtime": 1778179425.1947434,
+    "hash": "dc57c0e66042cc0763db57296d4f8815"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/public/favicon/favicon-16x16.png": {
+    "mtime": 1778179425.1947434,
+    "hash": "773f2a4f8f5c5c3b9e2d38c7ce8c16b9"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/public/favicon/android-chrome-192x192.png": {
+    "mtime": 1778179425.2207444,
+    "hash": "b66bba77f923eeb949fa2b48dad9a304"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/public/favicon/android-chrome-512x512.png": {
+    "mtime": 1778179425.2597458,
+    "hash": "7c1dd6b8fb0fe9ab122fa0fb2d565321"
+  },
+  "/home/arturcm/facturacion-electronica-mexico/public/favicon/apple-touch-icon.png": {
+    "mtime": 1778179425.214744,
+    "hash": "a70918c8825249c9b9003448fed81568"
+  }
+}

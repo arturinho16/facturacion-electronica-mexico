@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { normalizarObjetoImp } from '@/lib/sat/timbrar';
+import { normalizeHidrocarburosProductInput } from '@/modules/cfdi-complements/hidrocarburos';
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,6 +20,7 @@ export async function POST(req: NextRequest) {
       ] = line.split(',');
 
       if (nombre && precio && claveProdServ) {
+        const hyp = normalizeHidrocarburosProductInput({ claveProdServ, claveUnidad, unidad });
         await prisma.product.create({
           data: {
             nombre: nombre.trim(),
@@ -26,11 +28,14 @@ export async function POST(req: NextRequest) {
             descripcion: nombre.trim(),
             precio: Number(precio),
             claveProdServ: claveProdServ.trim(),
-            claveUnidad: claveUnidad?.trim() || 'H87',
-            unidad: unidad?.trim() || 'Pieza',
+            claveUnidad: hyp.claveUnidad,
+            unidad: hyp.unidad,
             objetoImpuesto: normalizarObjetoImp(objetoImpuesto),
             ivaTasa: Number(ivaTasa || 0.16),
             iepsTasa: Number(iepsTasa || 0),
+            requiresHypComplement: hyp.requiresHypComplement,
+            hypClave: hyp.hypClave,
+            hypSubproducto: hyp.hypSubproducto,
           }
         });
         guardados++;
@@ -38,7 +43,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, count: guardados });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Error interno' }, { status: 500 });
   }
 }

@@ -81,6 +81,11 @@ model Product {
   cuentaPredial    String?  // Para bienes inmuebles
   numeroPedimento  String?  // Información aduanera
   impuestoLocal    Decimal? @db.Decimal(5, 4) // Tasa de impuesto local si aplica
+
+  // Complemento Concepto Hidrocarburos y Petrolíferos
+  requiresHypComplement Boolean @default(false)
+  hypClave              String?
+  hypSubproducto        String?
   
   // Relaciones (Corregido el error tipográfico onceptosFactura)
   conceptosFactura    ConceptoFactura[]
@@ -184,6 +189,13 @@ model ConceptoFactura {
   iepsTasa        Decimal  @default(0.00) @db.Decimal(5, 4)
   ivaImporte      Decimal  @default(0) @db.Decimal(15, 2)
   iepsImporte     Decimal  @default(0) @db.Decimal(15, 2)
+
+  // Snapshot fiscal del complemento de Hidrocarburos y Petrolíferos
+  requiresHypComplement Boolean @default(false)
+  hypClave              String?
+  hypSubproducto        String?
+  hypTipoPermiso        String?
+  hypNumeroPermiso      String?
 
   createdAt       DateTime @default(now())
 }
@@ -343,6 +355,58 @@ model PerfilDescargaSat {
 
   facturas    FacturaRecibida[]
   solicitudes SolicitudSat[]
+  expedienteDocumentos ExpedienteFiscalDocumento[]
+  expedienteSolicitudes ExpedienteFiscalSolicitud[]
+}
+
+model ExpedienteFiscalDocumento {
+  id          String   @id @default(uuid())
+  perfilId    String
+  perfil      PerfilDescargaSat @relation(fields: [perfilId], references: [id])
+
+  tipo        String
+  titulo      String
+  estatus     String   @default("SIN_REVISAR")
+  ejercicio   Int?
+  periodo     String?
+  fechaDocumento DateTime?
+  fechaVencimiento DateTime?
+  folio       String?
+  importe     Decimal? @db.Decimal(15, 2)
+  moneda      String   @default("MXN")
+  notas       String?  @db.Text
+
+  archivoNombre String?
+  archivoPath   String?
+  archivoMime   String?
+  archivoSize   Int?
+  archivoHash   String?
+  metadata      Json?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([perfilId])
+  @@index([tipo])
+  @@index([estatus])
+  @@index([ejercicio])
+}
+
+model ExpedienteFiscalSolicitud {
+  id          String   @id @default(uuid())
+  requestId   String   @unique
+  perfilId    String
+  perfil      PerfilDescargaSat @relation(fields: [perfilId], references: [id])
+  tipo        String
+  estado      String   @default("PENDIENTE")
+  mensaje     String?  @db.Text
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([perfilId])
+  @@index([tipo])
+  @@index([estado])
 }
 
 // ==========================================
@@ -501,6 +565,11 @@ model ConfiguracionFiscal {
   pacPasswordEncrypted String?
   pacAmbiente          String  @default("demo")
   pacStampUrl          String?
+
+  // Complemento Concepto Hidrocarburos y Petrolíferos
+  hypEnabled       Boolean @default(false)
+  hypTipoPermiso   String?
+  hypNumeroPermiso String?
 
   // Correo saliente
   correoRemitenteNombre     String?
