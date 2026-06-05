@@ -18,6 +18,7 @@ const routeModuleMap: Array<{ prefix: string; modulo: string }> = [
   { prefix: '/expediente-fiscal', modulo: 'expediente_fiscal' },
   { prefix: '/facturas-recibidas/consolidado', modulo: 'consolidado_recibidas' },
   { prefix: '/facturas-recibidas', modulo: 'descargas_sat' },
+  { prefix: '/reportes', modulo: 'configuracion' },
   { prefix: '/configuracion', modulo: 'configuracion' },
   
 ];

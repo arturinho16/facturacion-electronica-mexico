@@ -247,7 +247,7 @@ export async function timbrarFactura(datos: DatosFactura): Promise<{ uuid: strin
   const password = credentials?.password;
   const usuario = credentials?.pacUsuario;
   const passwordFinkok = credentials?.pacPassword;
-  const ambiente = credentials?.pacAmbiente || 'demo';
+  const ambiente = credentials?.pacAmbiente || 'prod';
 
   if (!cerB64 || !keyB64 || !password) {
     throw new Error('Configura y activa los sellos digitales CSD antes de timbrar.');

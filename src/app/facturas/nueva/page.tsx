@@ -527,7 +527,7 @@ function ClienteSearch({
   return (
     <div ref={ref} className="relative">
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        {/* <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /> */}
         <input
           value={query}
           onChange={(e) => {
@@ -536,7 +536,8 @@ function ClienteSearch({
           }}
           onFocus={() => setOpen(true)}
           placeholder="Buscar por nombre o RFC..."
-          className="w-full rounded-xl border bg-slate-50 py-2.5 !pl-10 pr-3 outline-none focus:ring-2 focus:ring-blue-400"
+          
+          className="w-full rounded-xl border bg-slate-50 py-2.5 px-4 outline-none focus:ring-2 focus:ring-blue-400"
         />
       </div>
 
@@ -1585,7 +1586,7 @@ function NuevaFacturaForm() {
                     </label>
                     <div className="relative">
                       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">
-                        $
+
                       </span>
                       <input
                         type="number"

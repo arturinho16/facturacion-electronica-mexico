@@ -159,6 +159,33 @@ model Factura {
   @@unique([serie, folio]) // No puede haber dos facturas con misma serie+folio
 }
 
+model TimbreUso {
+  id                    String   @id @default(uuid())
+  uuid                  String   @unique
+  tipoCfdi              String
+  facturaId             String?
+  reciboNominaId        String?
+  configuracionFiscalId String?
+
+  emisorRfc             String
+  emisorNombre          String?
+  receptorRfc           String?
+  receptorNombre        String?
+  serie                 String?
+  folio                 String?
+  total                 Decimal? @db.Decimal(15, 2)
+
+  pac                   String   @default("FINKOK")
+  ambiente              String   @default("prod")
+  fechaTimbrado         DateTime @default(now())
+  createdAt             DateTime @default(now())
+
+  @@index([fechaTimbrado])
+  @@index([tipoCfdi])
+  @@index([emisorRfc])
+  @@index([receptorRfc])
+}
+
 // ==========================================
 // 4. Conceptos de la Factura
 // ==========================================
@@ -563,7 +590,7 @@ model ConfiguracionFiscal {
   pacProveedor         String  @default("FINKOK")
   pacUsuario           String?
   pacPasswordEncrypted String?
-  pacAmbiente          String  @default("demo")
+  pacAmbiente          String  @default("prod")
   pacStampUrl          String?
 
   // Complemento Concepto Hidrocarburos y Petrolíferos
@@ -622,7 +649,7 @@ model RegistroTimbrado {
 
   estatus         String    @default("PENDIENTE") // EXITOSO, FALLIDO, VALIDACION, PENDIENTE
   pac             String    @default("FINKOK")
-  ambiente        String    @default("demo")
+  ambiente        String    @default("prod")
   codigoError     String?
   mensajeError    String?   @db.Text
   xmlGenerado     String?   @db.Text

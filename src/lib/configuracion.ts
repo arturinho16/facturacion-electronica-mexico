@@ -114,7 +114,7 @@ export function buildConfigPayload(body: ConfigInput) {
     pacProveedor: clean(body.pacProveedor) || 'FINKOK',
     pacUsuario: clean(body.pacUsuario),
     pacPasswordEncrypted: clean(body.pacPassword) || clean(body.pacPasswordEncrypted),
-    pacAmbiente: clean(body.pacAmbiente) || 'demo',
+    pacAmbiente: clean(body.pacAmbiente) || 'prod',
     pacStampUrl: clean(body.pacStampUrl),
     hypEnabled: Boolean(body.hypEnabled),
     hypTipoPermiso: clean(body.hypTipoPermiso),
@@ -204,7 +204,7 @@ export async function getCsdCredentials() {
     password: config.csdPasswordEncrypted,
     pacUsuario: config.pacUsuario || '',
     pacPassword: config.pacPasswordEncrypted || '',
-    pacAmbiente: config.pacAmbiente || 'demo',
+    pacAmbiente: config.pacAmbiente || 'prod',
     pacStampUrl: config.pacStampUrl || '',
   };
 }

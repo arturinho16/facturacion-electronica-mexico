@@ -5,6 +5,7 @@ import { getNoCertificado, getCertificadoBase64, keyToPem } from '@/lib/sat/firm
 import * as soap from 'soap';
 import { getActiveConfig, getCsdCredentials, registrarTimbreUsado } from '@/lib/configuracion';
 import { generarCadenaOriginal, inyectarCertificado, inyectarSello, sellarCadena } from '@/lib/nomina/sellado';
+import { registrarTimbreUso } from '@/lib/timbres';
 import { armarPeriodoNomina, obtenerDatosEmpleadoNomina, obtenerDatosEmisorNomina } from '@/lib/nomina/armado';
 
 const WSDL_DEMO = 'https://demo-facturacion.finkok.com/servicios/soap/stamp.wsdl';
@@ -53,7 +54,7 @@ export async function POST(req: Request) {
         // 3. Configuración de Finkok
         const usuarioFinkok = csd.pacUsuario;
         const passwordFinkok = csd.pacPassword;
-        const ambiente = csd.pacAmbiente || 'demo';
+        const ambiente = csd.pacAmbiente || 'prod';
         const wsdl = csd.pacStampUrl || (ambiente === 'demo' ? WSDL_DEMO : WSDL_PROD);
 
         // 🔥 OPTIMIZACIÓN: Creamos el cliente SOAP una sola vez para toda la tanda
@@ -156,6 +157,20 @@ export async function POST(req: Request) {
                         }
                     });
                     await registrarTimbreUsado(tx);
+                    await registrarTimbreUso(tx, {
+                        uuid: stampResult.UUID,
+                        tipoCfdi: 'NOMINA',
+                        reciboNominaId: recibo.id,
+                        emisorRfc: config.rfc,
+                        emisorNombre: config.razonSocial,
+                        receptorRfc: recibo.empleado.rfc,
+                        receptorNombre: `${recibo.empleado.nombre} ${recibo.empleado.apellidoPaterno} ${recibo.empleado.apellidoMaterno || ''}`.trim(),
+                        serie: config.folioNominaSerie || 'NOM',
+                        folio: recibo.id.slice(0, 10),
+                        total: recibo.totalNeto,
+                        pac: config.pacProveedor,
+                        ambiente,
+                    });
                 });
 
                 resultados.push({

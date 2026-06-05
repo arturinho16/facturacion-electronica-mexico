@@ -8,7 +8,8 @@ import { Building2 } from 'lucide-react';
 function LoginForm() {
   const router = useRouter();
   const search = useSearchParams();
-  const next = search.get('next') || '/';
+  const rawNext = search.get('next') || '/';
+  const next = rawNext.startsWith('/api/reportes/timbres') ? '/reportes/timbres' : rawNext.startsWith('/api/') ? '/' : rawNext;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

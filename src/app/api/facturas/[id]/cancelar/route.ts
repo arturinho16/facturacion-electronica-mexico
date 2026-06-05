@@ -54,7 +54,7 @@ export async function PATCH(
     const rfcEmisor = config.rfc;
     const finkokUser = csd.pacUsuario;
     const finkokPass = csd.pacPassword;
-    const ambiente = csd.pacAmbiente || 'demo';
+    const ambiente = csd.pacAmbiente || 'prod';
 
     const cerB64 = csd.certificadoBase64;
     const keyB64 = csd.llaveBase64;

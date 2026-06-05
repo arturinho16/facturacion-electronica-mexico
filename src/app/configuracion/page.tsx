@@ -55,6 +55,7 @@ type ConfigFiscal = {
   pacProveedor?: string;
   pacUsuario?: string;
   pacAmbiente?: string;
+  pacStampUrl?: string;
   pacPassword?: string;
   pacPasswordConfigurado?: boolean;
   hypEnabled?: boolean;
@@ -191,7 +192,8 @@ const emptyConfig: ConfigFiscal = {
   logoMimeType: '',
   pacProveedor: 'FINKOK',
   pacUsuario: '',
-  pacAmbiente: 'demo',
+  pacAmbiente: 'prod',
+  pacStampUrl: 'https://facturacion.finkok.com/servicios/soap/stamp.wsdl',
   pacPassword: '',
   pacPasswordConfigurado: false,
   hypEnabled: false,
@@ -234,6 +236,7 @@ const stringConfigKeys: Array<keyof ConfigFiscal> = [
   'pacProveedor',
   'pacUsuario',
   'pacAmbiente',
+  'pacStampUrl',
   'pacPassword',
   'hypTipoPermiso',
   'hypNumeroPermiso',
@@ -926,10 +929,17 @@ export default function ConfiguracionPage() {
                     </div>
                   </div>
                 ))}
-                <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                   <Field label="Proveedor PAC"><input name="pacProveedor" className={inputClass} value={config.pacProveedor ?? 'FINKOK'} onChange={(e) => patchConfig({ pacProveedor: e.target.value })} /></Field>
+                  <Field label="Ambiente PAC">
+                    <select name="pacAmbiente" className={inputClass} value={config.pacAmbiente || 'prod'} onChange={(e) => patchConfig({ pacAmbiente: e.target.value })}>
+                      <option value="prod">Produccion</option>
+                      <option value="demo">Demo</option>
+                    </select>
+                  </Field>
                   <Field label="Usuario PAC"><input name="pacUsuario" className={inputClass} value={config.pacUsuario ?? ''} onChange={(e) => patchConfig({ pacUsuario: e.target.value })} /></Field>
                   <Field label="Contraseña PAC"><input name="pacPassword" className={inputClass} type="password" autoComplete="new-password" value={config.pacPassword ?? ''} placeholder={config.pacPasswordConfigurado ? 'Guardada, escribir solo para cambiar' : ''} onChange={(e) => patchConfig({ pacPassword: e.target.value, pacPasswordConfigurado: Boolean(e.target.value || config.pacPasswordConfigurado) })} /></Field>
+                  <Field label="WSDL timbrado Finkok"><input name="pacStampUrl" className={inputClass} value={config.pacStampUrl ?? ''} placeholder="https://facturacion.finkok.com/servicios/soap/stamp.wsdl" onChange={(e) => patchConfig({ pacStampUrl: e.target.value })} /></Field>
                 </div>
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">

@@ -8,7 +8,7 @@ export async function timbrarNominaFinkok(xmlFirmado: string) {
     const credentials = await getCsdCredentials();
     const usuario = credentials?.pacUsuario;
     const password = credentials?.pacPassword;
-    const ambiente = credentials?.pacAmbiente || 'demo';
+    const ambiente = credentials?.pacAmbiente || 'prod';
     const wsdl = credentials?.pacStampUrl || (ambiente === 'prod' ? WSDL_PROD : WSDL_DEMO);
 
     if (!usuario || !password) {

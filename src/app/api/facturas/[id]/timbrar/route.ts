@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { timbrarFactura, DatosFactura, normalizarObjetoImp } from '@/lib/sat/timbrar';
-import { registrarTimbreUsado } from '@/lib/configuracion';
+import { getActiveConfig, registrarTimbreUsado } from '@/lib/configuracion';
+import { registrarTimbreUso } from '@/lib/timbres';
 import { normalizarTipoComprobante } from '@/lib/sat/tipos-comprobante';
 import { validateHidrocarburosFactura } from '@/modules/cfdi-complements/hidrocarburos';
 
@@ -105,6 +106,7 @@ export async function POST(
     };
 
     const resultado = await timbrarFactura(datosParaTimbrar);
+    const config = await getActiveConfig();
 
     const facturaActualizada = await prisma.$transaction(async (tx) => {
       const actualizada = await tx.factura.update({
@@ -120,6 +122,20 @@ export async function POST(
         },
       });
       await registrarTimbreUsado(tx);
+      await registrarTimbreUso(tx, {
+        uuid: resultado.uuid,
+        tipoCfdi: 'FACTURA',
+        facturaId: factura.id,
+        emisorRfc: config?.rfc || '',
+        emisorNombre: config?.razonSocial || '',
+        receptorRfc: factura.client.rfc,
+        receptorNombre: factura.client.nombreRazonSocial,
+        serie: factura.serie,
+        folio: factura.folio,
+        total: factura.total,
+        pac: config?.pacProveedor,
+        ambiente: config?.pacAmbiente,
+      });
       return actualizada;
     });
 

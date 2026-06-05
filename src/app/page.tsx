@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   Users, Package, FileText, BarChart3, PlusCircle, Receipt,
   FileCheck, Menu, X, Globe, Calendar, PieChart as PieChartIcon,
-  TrendingUp, LayoutPanelLeft, LogOut, Archive, Settings, Inbox, Calculator
+  TrendingUp, LayoutPanelLeft, LogOut, Archive, Settings, Inbox, Calculator, Stamp
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
@@ -69,6 +69,7 @@ const NAV_ITEMS = [
   { href: '/nomina/facturacion-masiva', label: 'Nómina Masiva', Icon: FileText },
   { href: '/facturas-recibidas', label: 'Facturas Recibidas', Icon: Inbox },
   { href: '/facturas-recibidas/consolidado', label: 'Consolidado Recibidas', Icon: Archive },
+  { href: '/reportes/timbres', label: 'Timbres Usados', Icon: Stamp },
   { href: '/configuracion', label: 'Configuración', Icon: Settings },
 ] as const;
 
@@ -85,6 +86,7 @@ const MODULE_CARDS = [
   { href: '/nomina/facturacion-masiva', title: 'Nómina Masiva', description: 'Timbrado de recibos en lote.', Icon: FileText, color: 'border-l-teal-500 bg-teal-50 text-teal-600' },
   { href: '/facturas-recibidas', title: 'Facturas Recibidas', description: 'Descarga de facturas del SAT.', Icon: Inbox, color: 'border-l-pink-500 bg-pink-50 text-pink-600' },
   { href: '/facturas-recibidas/consolidado', title: 'Consolidado Recibidas', description: 'Visualización y descargas por RFC.', Icon: Archive, color: 'border-l-rose-500 bg-rose-50 text-rose-600' },
+  { href: '/reportes/timbres', title: 'Timbres Usados', description: 'Conteo por UUID y periodo.', Icon: Stamp, color: 'border-l-blue-500 bg-blue-50 text-blue-600' },
   { href: '/configuracion', title: 'Configuración', description: 'Perfil fiscal, usuarios y apariencia.', Icon: Settings, color: 'border-l-slate-800 bg-slate-100 text-slate-700' },
 ] as const;
 

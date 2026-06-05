@@ -6,6 +6,7 @@ import { generarXMLNomina } from '@/app/nomina/facturacion-masiva/utils/generarX
 import { validarXMLNomina } from '@/app/nomina/facturacion-masiva/utils/validarXMLNomina';
 import { generarCadenaOriginal, inyectarCertificado, inyectarSello, sellarCadena } from '@/lib/nomina/sellado';
 import { enviarAPAC } from '@/lib/nomina/pac';
+import { registrarTimbreUso } from '@/lib/timbres';
 import { getCertificadoBase64, getNoCertificado, keyToPem } from '@/lib/sat/firmar';
 import { obtenerDatosEmpleadoNomina, obtenerDatosEmisorNomina, armarPeriodoNomina } from '@/lib/nomina/armado';
 
@@ -147,6 +148,20 @@ export async function POST(req: NextRequest) {
         },
       });
       await registrarTimbreUsado(tx);
+      await registrarTimbreUso(tx, {
+        uuid,
+        tipoCfdi: 'NOMINA',
+        reciboNominaId: recibo.id,
+        emisorRfc: config.rfc,
+        emisorNombre: config.razonSocial,
+        receptorRfc: recibo.empleado.rfc,
+        receptorNombre: `${recibo.empleado.nombre} ${recibo.empleado.apellidoPaterno} ${recibo.empleado.apellidoMaterno || ''}`.trim(),
+        serie: config.folioNominaSerie || 'NOM',
+        folio: recibo.id.slice(0, 10),
+        total: recibo.totalNeto,
+        pac: config.pacProveedor,
+        ambiente: config.pacAmbiente,
+      });
     });
 
     return NextResponse.json({ ok: true, reciboId: recibo.id, uuid });
