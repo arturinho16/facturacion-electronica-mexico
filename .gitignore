@@ -1,0 +1,9 @@
+cat > .gitignore <<'EOF'
+.env
+.env.local
+.env.development
+.env.production
+node_modules
+.next
+docker-compose.override.yml
+EOF

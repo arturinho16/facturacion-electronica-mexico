@@ -1,0 +1,65 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+      NEXT_TELEMETRY_DISABLED: "1"
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+
+      JWT_SECRET: ${JWT_SECRET}
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    volumes:
+      - almacen_facturas:/app/almacen_facturas
+      - respaldos_sistema:/app/respaldos-sistema
+      - expediente_fiscal:/app/expediente_fiscal
+      - sat_sessions:/app/.sat_sessions
+
+    networks:
+      - app-network
+      - dokploy-network
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+  almacen_facturas:
+  respaldos_sistema:
+  expediente_fiscal:
+  sat_sessions:
+
+networks:
+  app-network:
+    driver: bridge
+
+  dokploy-network:
+    external: true
