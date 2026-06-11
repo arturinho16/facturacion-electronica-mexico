@@ -1,9 +1,91 @@
 cat > .gitignore <<'EOF'
+# =========================
+# Variables de entorno / secretos
+# =========================
 .env
-.env.local
-.env.development
-.env.production
-node_modules
-.next
+.env.*
+!.env.example
+
+# =========================
+# Dependencias / build
+# =========================
+node_modules/
+.next/
+out/
+dist/
+build/
+
+# =========================
+# Docker local
+# =========================
 docker-compose.override.yml
+
+# =========================
+# Archivos generados por la app
+# =========================
+almacen_facturas/
+almacen facturas/
+respaldos-sistema/
+expediente_fiscal/
+.sat_sessions/
+
+# =========================
+# Graphify / reportes locales
+# =========================
+graphify-out/
+
+# =========================
+# Certificados SAT / CSD / FIEL / llaves
+# =========================
+src/lib/sat/certificados/
+**/certificados/
+**/CSD/
+**/FIEL/
+*.cer
+*.key
+*.pfx
+*.p12
+*.pem
+**/*certificado*base64*.txt
+**/*key*base64*.txt
+
+# =========================
+# Archivos XML/PDF de pruebas con posible información fiscal real
+# =========================
+validacion-xml/
+Wiki-nomina/timbradoConError.xml
+
+# =========================
+# Herramientas locales / IA
+# =========================
+.codex
+.codex/
+.agents/
+.claude/
+.gemini/
+.kiro/
+
+# =========================
+# Logs
+# =========================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# Sistema operativo / editores
+# =========================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# =========================
+# Backups locales
+# =========================
+*.bak
+*.backup
+*.dump
 EOF
