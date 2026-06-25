@@ -7,9 +7,7 @@ import { getActiveConfig, getCsdCredentials, registrarTimbreUsado } from '@/lib/
 import { generarCadenaOriginal, inyectarCertificado, inyectarSello, sellarCadena } from '@/lib/nomina/sellado';
 import { registrarTimbreUso } from '@/lib/timbres';
 import { armarPeriodoNomina, obtenerDatosEmpleadoNomina, obtenerDatosEmisorNomina } from '@/lib/nomina/armado';
-
-const WSDL_DEMO = 'https://demo-facturacion.finkok.com/servicios/soap/stamp.wsdl';
-const WSDL_PROD = 'https://facturacion.finkok.com/servicios/soap/stamp.wsdl';
+import { resolveFinkokStampWsdl } from '@/lib/sat/finkok';
 
 export async function POST(req: Request) {
     try {
@@ -55,7 +53,7 @@ export async function POST(req: Request) {
         const usuarioFinkok = csd.pacUsuario;
         const passwordFinkok = csd.pacPassword;
         const ambiente = csd.pacAmbiente || 'prod';
-        const wsdl = csd.pacStampUrl || (ambiente === 'demo' ? WSDL_DEMO : WSDL_PROD);
+        const wsdl = resolveFinkokStampWsdl(csd.pacStampUrl, ambiente);
 
         // 🔥 OPTIMIZACIÓN: Creamos el cliente SOAP una sola vez para toda la tanda
         const client = await soap.createClientAsync(wsdl);
@@ -109,13 +107,6 @@ export async function POST(req: Request) {
 
                 // C) Inyectar el sello real reemplazando el placeholder
                 const xmlFirmado = inyectarSello(xmlConCertificado, { sello });
-
-                // 👇 RADIOGRAFÍA COMPLETA EN CONSOLA 👇
-                console.log(`\n========== EMPLEADO: ${recibo.empleado.nombre} ==========`);
-                console.log(`\n[1] CADENA ORIGINAL:\n${cadenaOriginal}`);
-                console.log(`\n[2] SELLO GENERADO:\n${sello}`);
-                console.log(`\n[3] XML FINAL A FINKOK:\n${xmlFirmado}`);
-                console.log(`=====================================================\n`);
 
                 // D) Petición a Finkok
                 const xmlBase64 = Buffer.from(xmlFirmado, 'utf-8').toString('base64');

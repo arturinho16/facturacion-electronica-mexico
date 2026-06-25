@@ -5,6 +5,7 @@ import { join } from 'path';
 import { Xslt, XmlParser } from 'xslt-processor';
 import { keyToPem, getNoCertificado, getCertificadoBase64, generarSello } from './firmar';
 import { getActiveConfig, getCsdCredentials } from '@/lib/configuracion';
+import { resolveFinkokStampWsdl } from '@/lib/sat/finkok';
 import {
   HIDROCARBUROS_NAMESPACE,
   HIDROCARBUROS_SCHEMA_LOCATION,
@@ -12,9 +13,6 @@ import {
   requiresHidrocarburosComplement,
   validateHidrocarburosConcept,
 } from '@/modules/cfdi-complements/hidrocarburos';
-
-const WSDL_DEMO = 'https://demo-facturacion.finkok.com/servicios/soap/stamp.wsdl';
-const WSDL_PROD = 'https://facturacion.finkok.com/servicios/soap/stamp.wsdl';
 
 const xsltPath = join(process.cwd(), 'src/lib/sat/cadena-original.xslt');
 const cargarXsltCadenaOriginal = () => {
@@ -280,16 +278,7 @@ export async function timbrarFactura(datos: DatosFactura): Promise<{ uuid: strin
   const sello = generarSello(cadenaOriginal, keyPem);
   const xmlFirmado = xmlSinSello.replace('Sello=""', `Sello="${sello}"`);
 
-  {/*
-  console.log("\n==========================================");
-  console.log("🔍 MODO INSPECTOR: DATOS ANTES DE FINKOK");
-  console.log("==========================================");
-  console.log("🔗 CADENA ORIGINAL:\n", cadenaOriginal);
-  console.log("------------------------------------------");
-  console.log("📄 XML QUE SE ENVIARÁ AL SAT:\n", xmlFirmado);
-  console.log("==========================================\n");
-  */}
-  const wsdl = credentials?.pacStampUrl || (ambiente === 'demo' ? WSDL_DEMO : WSDL_PROD);
+  const wsdl = resolveFinkokStampWsdl(credentials?.pacStampUrl, ambiente);
   const client = await soap.createClientAsync(wsdl);
   const xmlBase64 = Buffer.from(xmlFirmado, 'utf-8').toString('base64');
 

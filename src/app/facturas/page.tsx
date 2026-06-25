@@ -43,11 +43,11 @@ type EmpresaEmisorPDF = {
 
 async function getEmpresaEmisor(): Promise<EmpresaEmisorPDF> {
   const res = await fetch('/api/configuracion', { cache: 'no-store' }).catch(() => null);
-  if (!res?.ok) return EMISOR;
+  if (!res?.ok) return EMPTY_EMISOR;
   const config = await res.json().catch(() => ({}));
   return {
-    nombre: config.razonSocial || config.nombreComercial || EMISOR.nombre,
-    rfc: config.rfc || EMISOR.rfc,
+    nombre: config.razonSocial || '',
+    rfc: config.rfc || '',
     direccion: [
       config.calle,
       config.numeroExterior,
@@ -55,12 +55,15 @@ async function getEmpresaEmisor(): Promise<EmpresaEmisorPDF> {
       config.colonia,
       config.municipio,
       config.estado,
-    ].filter(Boolean).join(', ') || EMISOR.direccion,
-    cp: config.codigoPostal ? `${config.codigoPostal}${config.estado ? ` ${config.estado}` : ''}` : EMISOR.cp,
-    regimenFiscal: config.regimenFiscal || EMISOR.regimenFiscal,
-    telefono: config.telefono || EMISOR.telefono,
+    ].filter(Boolean).join(', '),
+    cp: config.codigoPostal ? `${config.codigoPostal}${config.estado ? ` ${config.estado}` : ''}` : '',
+    regimenFiscal: config.regimenFiscal || '',
+    telefono: config.telefono || undefined,
   };
 }
+
+const emisorTienePerfilFiscal = (emisor: EmpresaEmisorPDF) =>
+  Boolean(emisor.nombre?.trim() && emisor.rfc?.trim() && emisor.regimenFiscal?.trim() && emisor.cp?.match(/\d{5}/));
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type Concepto = {
@@ -158,13 +161,13 @@ const fmtFechaHora = (d: string) =>
     .format(new Date(d))
     .replace(',', ' -');
 
-const EMISOR = {
-  nombre: 'OMAR ARTURO CORONA MONROY',
-  rfc: 'COMO891216CM1',
-  direccion: 'Francisco Clavijero 106 Int. 2, Centro',
-  cp: '42000 HIDALGO',
-  regimenFiscal: '626 - Régimen Simplificado de Confianza',
-  telefono: '7712427953',
+const EMPTY_EMISOR: EmpresaEmisorPDF = {
+  nombre: '',
+  rfc: '',
+  direccion: '',
+  cp: '',
+  regimenFiscal: '',
+  telefono: undefined,
 };
 
 const CATALOGO_FORMA_PAGO: Record<string, string> = {
@@ -398,7 +401,7 @@ const extractCfdiData = (xml?: string): CfdiExtra => {
 };
 
 // ─── Constructor Centralizado del Objeto Factura para el PDF ─────────────────
-const buildFacturaData = (f: Factura, emisor: EmpresaEmisorPDF = EMISOR) => {
+const buildFacturaData = (f: Factura, emisor: EmpresaEmisorPDF = EMPTY_EMISOR) => {
   const cfdiExtra = f.xmlTimbrado ? extractCfdiData(f.xmlTimbrado) : {};
 
   const partesDireccion = [
@@ -568,7 +571,7 @@ export default function FacturasPage() {
   const [enviandoCorreo, setEnviandoCorreo] = useState(false);
   const [msgCorreo, setMsgCorreo] = useState('');
   const [copiado, setCopiado] = useState<string | null>(null);
-  const [emisorConfig, setEmisorConfig] = useState<EmpresaEmisorPDF>(EMISOR);
+  const [emisorConfig, setEmisorConfig] = useState<EmpresaEmisorPDF>(EMPTY_EMISOR);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -585,7 +588,7 @@ export default function FacturasPage() {
 
   useEffect(() => {
     cargar();
-    getEmpresaEmisor().then(setEmisorConfig).catch(() => setEmisorConfig(EMISOR));
+    getEmpresaEmisor().then(setEmisorConfig).catch(() => setEmisorConfig(EMPTY_EMISOR));
   }, [cargar]);
 
   useEffect(() => {
@@ -665,6 +668,11 @@ export default function FacturasPage() {
   };
 
   const handleDescargaMasiva = async () => {
+    if (!emisorTienePerfilFiscal(emisorConfig)) {
+      alert('Configura el perfil fiscal del emisor antes de generar PDFs.');
+      return;
+    }
+
     setCreandoZip(true);
 
     try {
@@ -713,6 +721,11 @@ export default function FacturasPage() {
 
   const handleDescargar = async (f: Factura, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!emisorTienePerfilFiscal(emisorConfig)) {
+      alert('Configura el perfil fiscal del emisor antes de generar el PDF.');
+      return;
+    }
+
     setDescargando(f.id);
 
     try {
@@ -813,6 +826,10 @@ export default function FacturasPage() {
 
   const handleEnviarCorreo = async (correo: string) => {
     if (!facturaCorreo) return;
+    if (!emisorTienePerfilFiscal(emisorConfig)) {
+      setMsgCorreo('Configura el perfil fiscal del emisor antes de enviar el PDF.');
+      return;
+    }
 
     setEnviandoCorreo(true);
     setMsgCorreo('');

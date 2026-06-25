@@ -21,6 +21,48 @@ async function getEmpresaLogoUrl() {
     return config.logoUrl || undefined;
 }
 
+type EmpresaEmisorPDF = {
+    nombre: string;
+    rfc: string;
+    direccion: string;
+    cp: string;
+    regimenFiscal: string;
+    telefono?: string;
+};
+
+async function getEmpresaEmisor(): Promise<EmpresaEmisorPDF> {
+    const res = await fetch('/api/configuracion', { cache: 'no-store' }).catch(() => null);
+    if (!res?.ok) return EMPTY_EMISOR;
+    const config = await res.json().catch(() => ({}));
+    return {
+        nombre: config.razonSocial || '',
+        rfc: config.rfc || '',
+        direccion: [
+            config.calle,
+            config.numeroExterior,
+            config.numeroInterior ? `Int. ${config.numeroInterior}` : null,
+            config.colonia,
+            config.municipio,
+            config.estado,
+        ].filter(Boolean).join(', '),
+        cp: config.codigoPostal ? `${config.codigoPostal}${config.estado ? ` ${config.estado}` : ''}` : '',
+        regimenFiscal: config.regimenFiscal || '',
+        telefono: config.telefono || undefined,
+    };
+}
+
+const EMPTY_EMISOR: EmpresaEmisorPDF = {
+    nombre: '',
+    rfc: '',
+    direccion: '',
+    cp: '',
+    regimenFiscal: '',
+    telefono: undefined,
+};
+
+const emisorTienePerfilFiscal = (emisor: EmpresaEmisorPDF) =>
+    Boolean(emisor.nombre?.trim() && emisor.rfc?.trim() && emisor.regimenFiscal?.trim() && emisor.cp?.match(/\d{5}/));
+
 export default function ConsolidadoPage() {
     useInactivityTimeout(15);
 
@@ -33,7 +75,7 @@ export default function ConsolidadoPage() {
     const [completado, setCompletado] = useState(false);
 
     // Reutilizamos el constructor de datos del PDF que tienes en facturas
-    const buildFacturaData = async (f: any) => {
+    const buildFacturaData = (f: any, emisor: EmpresaEmisorPDF) => {
         // Función simplificada para extraer datos del XML necesario para el PDF
         const xml = f.xmlTimbrado || '';
         const getAttr = (name: string) => { const m = xml.match(new RegExp(`${name}=["']([^"']+)["']`, 'i')); return m ? m[1] : ''; };
@@ -41,7 +83,7 @@ export default function ConsolidadoPage() {
         return {
             folio: f.folio, serie: f.serie, fecha: f.fecha, estado: f.estado, uuid: f.uuid || getAttr('UUID'),
             tipoComprobante: tipoComprobanteLabel(f.tipoComprobante),
-            emisor: { nombre: 'OMAR ARTURO CORONA MONROY', rfc: 'COMO891216CM1', direccion: 'Francisco Clavijero 106 Int. 2, Centro', cp: '42000 HIDALGO', regimenFiscal: '626 - Régimen Simplificado de Confianza' },
+            emisor,
             receptor: { nombre: f.client.nombreRazonSocial, rfc: f.client.rfc, cp: f.client.cp, usoCfdi: f.usoCFDI || f.client.usoCfdiDefault, regimenFiscal: f.client.regimenFiscal },
             conceptos: f.conceptos.map((c: any) => ({ descripcion: c.descripcion, cantidad: c.cantidad, valorUnitario: c.precioUnitario, importe: (c.cantidad * c.precioUnitario) })),
             subtotal: f.subtotal, iva: f.totalIVA, total: f.total, moneda: f.moneda, formaPago: f.formaPago, metodoPago: f.metodoPago,
@@ -61,6 +103,13 @@ export default function ConsolidadoPage() {
 
             if (total === 0) {
                 alert('No hay facturas timbradas en este mes.');
+                setProcesando(false);
+                return;
+            }
+
+            const emisor = await getEmpresaEmisor();
+            if (!emisorTienePerfilFiscal(emisor)) {
+                alert('Configura el perfil fiscal del emisor antes de generar el consolidado.');
                 setProcesando(false);
                 return;
             }
@@ -91,7 +140,7 @@ export default function ConsolidadoPage() {
                         folderXML?.file(`${f.serie}-${f.folio}_${f.client.rfc}.xml`, f.xmlTimbrado);
                     }
 
-                    const facturaData = await buildFacturaData(f);
+                    const facturaData = buildFacturaData(f, emisor);
                     const facturaDoc = React.createElement(FacturaPDF, { factura: facturaData as any, logoUrl: await getEmpresaLogoUrl() }) as Parameters<typeof pdf>[0];
                     const blob = await pdf(facturaDoc).toBlob();
 

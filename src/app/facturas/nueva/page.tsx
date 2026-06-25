@@ -47,11 +47,11 @@ type EmpresaEmisorPDF = {
 
 async function getEmpresaEmisor(): Promise<EmpresaEmisorPDF> {
   const res = await fetch('/api/configuracion', { cache: 'no-store' }).catch(() => null);
-  if (!res?.ok) return EMISOR;
+  if (!res?.ok) return EMPTY_EMISOR;
   const config = await res.json().catch(() => ({}));
   return {
-    nombre: config.razonSocial || config.nombreComercial || EMISOR.nombre,
-    rfc: config.rfc || EMISOR.rfc,
+    nombre: config.razonSocial || '',
+    rfc: config.rfc || '',
     direccion: [
       config.calle,
       config.numeroExterior,
@@ -59,15 +59,18 @@ async function getEmpresaEmisor(): Promise<EmpresaEmisorPDF> {
       config.colonia,
       config.municipio,
       config.estado,
-    ].filter(Boolean).join(', ') || EMISOR.direccion,
-    cp: config.codigoPostal ? `${config.codigoPostal}${config.estado ? ` ${config.estado}` : ''}` : EMISOR.cp,
-    regimenFiscal: config.regimenFiscal || EMISOR.regimenFiscal,
-    telefono: config.telefono || EMISOR.telefono,
+    ].filter(Boolean).join(', '),
+    cp: config.codigoPostal ? `${config.codigoPostal}${config.estado ? ` ${config.estado}` : ''}` : '',
+    regimenFiscal: config.regimenFiscal || '',
+    telefono: config.telefono || undefined,
     hypEnabled: Boolean(config.hypEnabled),
     hypTipoPermiso: config.hypTipoPermiso || '',
     hypNumeroPermiso: config.hypNumeroPermiso || '',
   };
 }
+
+const emisorTienePerfilFiscal = (emisor: EmpresaEmisorPDF) =>
+  Boolean(emisor.nombre?.trim() && emisor.rfc?.trim() && emisor.regimenFiscal?.trim() && emisor.cp?.match(/\d{5}/));
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type Client = {
@@ -167,8 +170,18 @@ const FORMAS_PAGO = [
   { clave: '02', descripcion: 'Cheque nominativo' },
   { clave: '03', descripcion: 'Transferencia electrónica de fondos' },
   { clave: '04', descripcion: 'Tarjeta de crédito' },
+  { clave: '05', descripcion: 'Monedero Electronico' },
+  { clave: '06', descripcion: 'Dinero Electronico' },
   { clave: '08', descripcion: 'Vales de despensa' },
+  { clave: '14', descripcion: 'Consignacion' },
+  { clave: '15', descripcion: 'Condonacion' },
+  { clave: '25', descripcion: 'Remision de deuda' },
+  { clave: '26', descripcion: 'Prescripcion o caducidad' },
+  { clave: '27', descripcion: 'A satisfaccion del acreedor' },
   { clave: '28', descripcion: 'Tarjeta de débito' },
+  { clave: '29', descripcion: 'Tarjeta de Servicios' },
+  { clave: '30', descripcion: 'Aplicación de anticipos' },
+  { clave: '31', descripcion: 'Intermediarios' },
   { clave: '99', descripcion: 'Por definir' },
 ];
 
@@ -178,13 +191,13 @@ const MONEDAS = [
   { clave: 'EUR', descripcion: 'Euro' },
 ];
 
-const EMISOR = {
-  nombre: 'OMAR ARTURO CORONA MONROY',
-  rfc: 'COMO891216CM1',
-  direccion: 'Francisco Clavijero 106 Int. 2, Centro',
-  cp: '42000 HIDALGO',
-  regimenFiscal: '626 - Régimen Simplificado de Confianza',
-  telefono: '7712427953',
+const EMPTY_EMISOR: EmpresaEmisorPDF = {
+  nombre: '',
+  rfc: '',
+  direccion: '',
+  cp: '',
+  regimenFiscal: '',
+  telefono: undefined,
 };
 
 const fmt = formatMoneyMX;
@@ -438,7 +451,7 @@ const numeroALetra = (num: number): string => {
     .padStart(2, '0')}/100 MXN`;
 };
 
-const buildFacturaDataPDF = (factura: FacturaGuardada, emisor: EmpresaEmisorPDF = EMISOR) => {
+const buildFacturaDataPDF = (factura: FacturaGuardada, emisor: EmpresaEmisorPDF = EMPTY_EMISOR) => {
   const ext = extraerDatosXML(factura.xmlTimbrado || '');
 
   const usoCfdiClave = factura.usoCFDI || factura.client?.usoCfdiDefault || '';
@@ -536,7 +549,7 @@ function ClienteSearch({
           }}
           onFocus={() => setOpen(true)}
           placeholder="Buscar por nombre o RFC..."
-          
+
           className="w-full rounded-xl border bg-slate-50 py-2.5 px-4 outline-none focus:ring-2 focus:ring-blue-400"
         />
       </div>
@@ -905,7 +918,7 @@ function NuevaFacturaForm() {
   const [facturaGuardada, setFacturaGuardada] =
     useState<FacturaGuardada | null>(null);
   const [descargando, setDescargando] = useState(false);
-  const [emisorConfig, setEmisorConfig] = useState<EmpresaEmisorPDF>(EMISOR);
+  const [emisorConfig, setEmisorConfig] = useState<EmpresaEmisorPDF>(EMPTY_EMISOR);
 
   const cdmxInicial = getCDMXInfo();
 
@@ -956,7 +969,7 @@ function NuevaFacturaForm() {
       .then((r) => r.json())
       .then((d) => setProducts(Array.isArray(d) ? d : []));
 
-    getEmpresaEmisor().then(setEmisorConfig).catch(() => setEmisorConfig(EMISOR));
+    getEmpresaEmisor().then(setEmisorConfig).catch(() => setEmisorConfig(EMPTY_EMISOR));
   }, []);
 
   useEffect(() => {
@@ -1105,6 +1118,10 @@ function NuevaFacturaForm() {
 
   const handleDescargarModal = async () => {
     if (!facturaGuardada) return;
+    if (!emisorTienePerfilFiscal(emisorConfig)) {
+      alert('Configura el perfil fiscal del emisor antes de generar el PDF.');
+      return;
+    }
 
     setDescargando(true);
 
@@ -1134,6 +1151,9 @@ function NuevaFacturaForm() {
   };
 
   const handleRevisar = async () => {
+    if (!emisorTienePerfilFiscal(emisorConfig)) {
+      return alert('Configura primero el perfil fiscal del emisor en Configuración: RFC, razón social, régimen fiscal y código postal.');
+    }
     if (!folio.trim()) return alert('No se pudo calcular el siguiente folio. Intenta recargar la pantalla.');
     if (!clienteId) return alert('Selecciona un cliente');
     if (conceptos.some((c) => !c.productoId)) {

@@ -196,7 +196,7 @@ function SatLoginModal({ open, loading, perfil, configSat, onClose, onSubmit }: 
                 type="text"
                 value={rfc}
                 onChange={(e) => setRfc(e.target.value.toUpperCase())}
-                placeholder="COMO891216CM1"
+                placeholder={configSat?.rfc || 'RFC registrado ante SAT'}
                 className="w-full rounded-xl border-2 border-slate-200 bg-slate-50 p-3 font-mono uppercase text-slate-700 outline-none focus:border-blue-500"
               />
             </div>

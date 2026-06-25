@@ -103,12 +103,6 @@ export async function POST(req: NextRequest) {
       const cadena = await generarCadenaOriginal(xml);
       const sello = sellarCadena(cadena, keyPem);
       xml = inyectarSello(xml, { sello });
-      console.log(`\n========== CADENA ORIGINAL NOMINA recibo=${recibo.id} ==========`);
-      console.log(cadena);
-      console.log(`========== FIN CADENA ORIGINAL NOMINA recibo=${recibo.id} ==========\n`);
-      console.log(`\n========== XML NOMINA FIRMADO PARA FINKOK recibo=${recibo.id} ==========`);
-      console.log(xml);
-      console.log(`========== FIN XML NOMINA FIRMADO recibo=${recibo.id} ==========\n`);
       xmlTimbrado = await enviarAPAC(xml);
       uuid = xmlTimbrado.match(/UUID="([^"]+)"/)?.[1] || null;
     } catch (error: unknown) {

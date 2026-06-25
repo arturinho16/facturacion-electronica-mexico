@@ -1,15 +1,13 @@
 import * as soap from 'soap';
 import { getCsdCredentials } from '@/lib/configuracion';
-
-const WSDL_DEMO = 'https://demo-facturacion.finkok.com/servicios/soap/stamp.wsdl';
-const WSDL_PROD = 'https://facturacion.finkok.com/servicios/soap/stamp.wsdl';
+import { resolveFinkokStampWsdl } from '@/lib/sat/finkok';
 
 export async function timbrarNominaFinkok(xmlFirmado: string) {
     const credentials = await getCsdCredentials();
     const usuario = credentials?.pacUsuario;
     const password = credentials?.pacPassword;
     const ambiente = credentials?.pacAmbiente || 'prod';
-    const wsdl = credentials?.pacStampUrl || (ambiente === 'prod' ? WSDL_PROD : WSDL_DEMO);
+    const wsdl = resolveFinkokStampWsdl(credentials?.pacStampUrl, ambiente);
 
     if (!usuario || !password) {
         throw new Error('Configura usuario y contraseña del PAC Finkok antes de timbrar.');
