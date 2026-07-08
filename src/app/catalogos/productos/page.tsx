@@ -188,7 +188,14 @@ export default function ProductosPage() {
                 <div className="space-y-1"><label>Código Interno (SKU)</label><input name="codigoInterno" defaultValue={editingProduct?.codigoInterno} className="w-full p-3 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" /></div>
                 <div className="space-y-1">
                   <label>Precio Unitario (Sin IVA) *</label>
-                  <div className="relative"><span className="absolute left-3 top-3 text-slate-400 font-bold">$</span><input name="precio" type="number" step="0.000001" defaultValue={editingProduct?.precio} className="w-full p-3 pl-8 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" required /></div>
+                  <div className="relative">
+                    <input
+                      name="precio"
+                      type="number"
+                      step="0.000001"
+                      defaultValue={editingProduct?.precio}
+                      className="w-full p-3 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                      required /></div>
                 </div>
               </div>
 

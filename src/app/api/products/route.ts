@@ -49,14 +49,34 @@ export async function POST(req: NextRequest) {
 
     // 2. Lógica de aprendizaje: Guardar nuevas claves SAT
     if (data.claveProdServ) {
+      const claveProdServ = String(data.claveProdServ).trim();
+      const descripcionSat = String(data.nombreProdServ || data.nombre || '').trim();
+
       await prisma.satClaveProdServ.upsert({
-        where: { clave: data.claveProdServ },
+        where: { clave: claveProdServ },
         update: {},
         create: {
-          clave: data.claveProdServ,
-          descripcion: data.nombreProdServ || data.nombre, // Usamos la descripción del SAT
+          clave: claveProdServ,
+          descripcion: descripcionSat, // Usamos la descripción del SAT
         }
       });
+
+      if (/^\d{8}$/.test(claveProdServ) && descripcionSat) {
+        await prisma.catalogoSatProductoServicio.upsert({
+          where: { claveSat: claveProdServ },
+          update: {},
+          create: {
+            claveSat: claveProdServ,
+            descripcionSat,
+            categoria: 'Captura de usuarios',
+            subcategoria: 'Catálogo de productos',
+            tipo: 'Producto',
+            activo: true,
+            origen: 'Captura desde catálogo de productos',
+            esUsuario: true,
+          },
+        });
+      }
     }
 
     if (data.claveUnidad && data.unidad) {

@@ -976,7 +976,7 @@ export default function ConfiguracionPage() {
                         className={inputClass}
                         type="number"
                         min="0"
-                        value={config.timbresContratados ?? 0}
+                        defaultValue={config.timbresContratados ?? ""}
                         onChange={(e) => {
                           const contratados = Math.max(0, Number(e.target.value) || 0);
                           const usados = Math.max(0, Number(config.timbresUsados || 0));

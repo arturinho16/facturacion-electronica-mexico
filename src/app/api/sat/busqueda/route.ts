@@ -10,17 +10,23 @@ export async function GET(req: NextRequest) {
 
   try {
     if (tipo === 'producto') {
-      const resultados = await prisma.satClaveProdServ.findMany({
+      const resultados = await prisma.catalogoSatProductoServicio.findMany({
         where: {
           activo: true,
           OR: [
-            { clave: { contains: q, mode: 'insensitive' } },
-            { descripcion: { contains: q, mode: 'insensitive' } }
+            { claveSat: { contains: q, mode: 'insensitive' } },
+            { descripcionSat: { contains: q, mode: 'insensitive' } },
+            { categoria: { contains: q, mode: 'insensitive' } },
+            { subcategoria: { contains: q, mode: 'insensitive' } },
           ]
         },
+        orderBy: [{ claveSat: 'asc' }],
         take: 20 // Límite para autocompletado rápido
       });
-      return NextResponse.json(resultados);
+      return NextResponse.json(resultados.map((item) => ({
+        clave: item.claveSat,
+        descripcion: item.descripcionSat,
+      })));
     } 
     
     if (tipo === 'unidad') {

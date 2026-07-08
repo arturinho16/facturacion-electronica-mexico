@@ -340,6 +340,28 @@ model SatClaveUnidad {
   activo      Boolean  @default(true)
   createdAt   DateTime @default(now())
 }
+
+// ==========================================
+// 7.1 Catálogo SAT Productos y Servicios
+// ==========================================
+model CatalogoSatProductoServicio {
+  id             String   @id @default(uuid())
+  claveSat       String   @unique
+  descripcionSat String
+  categoria      String
+  subcategoria   String
+  tipo           String
+  activo         Boolean  @default(true)
+  origen         String?
+  esUsuario      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([claveSat])
+  @@index([descripcionSat])
+  @@index([categoria])
+  @@index([subcategoria])
+}
 model FacturaRecibida {
   id             String   @id @default(uuid())
   uuid           String   @unique

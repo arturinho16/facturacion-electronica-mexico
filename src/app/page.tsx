@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   Users, Package, FileText, BarChart3, PlusCircle, Receipt,
   FileCheck, Menu, X, Globe, Calendar, PieChart as PieChartIcon,
-  TrendingUp, LayoutPanelLeft, LogOut, Archive, Settings, Inbox, Calculator, Stamp
+  TrendingUp, LayoutPanelLeft, LogOut, Archive, Settings, Inbox, Calculator, Stamp, Database
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
@@ -76,6 +76,7 @@ const NAV_ITEMS = [
 const MODULE_CARDS = [
   { href: '/catalogos/clientes', title: 'Clientes', description: 'Sube la CIF de tus clientes', Icon: Users, color: 'border-l-emerald-500 bg-emerald-50 text-emerald-600' },
   { href: '/catalogos/productos', title: 'Productos', description: 'Productos y servicios a facturar', Icon: Package, color: 'border-l-violet-500 bg-violet-50 text-violet-600' },
+
   { href: '/facturas/nueva', title: 'Nueva Factura', description: 'Generar CFDI 4.0 al instante.', Icon: FileText, color: 'border-l-sky-500 bg-sky-50 text-sky-600' },
   { href: '/facturas', title: 'Facturas Emitidas', description: 'Historial, descarga y envío por correo.', Icon: Receipt, color: 'border-l-amber-500 bg-amber-50 text-amber-600' },
   { href: '/facturas/global', title: 'Factura Global', description: 'Ventas al público en general.', Icon: Globe, color: 'border-l-indigo-500 bg-indigo-50 text-indigo-600' },
@@ -87,6 +88,7 @@ const MODULE_CARDS = [
   { href: '/facturas-recibidas', title: 'Facturas Recibidas', description: 'Descarga de facturas del SAT.', Icon: Inbox, color: 'border-l-pink-500 bg-pink-50 text-pink-600' },
   { href: '/facturas-recibidas/consolidado', title: 'Consolidado Recibidas', description: 'Visualización y descargas por RFC.', Icon: Archive, color: 'border-l-rose-500 bg-rose-50 text-rose-600' },
   { href: '/reportes/timbres', title: 'Timbres Usados', description: 'Conteo por UUID y periodo.', Icon: Stamp, color: 'border-l-blue-500 bg-blue-50 text-blue-600' },
+  { href: '/catalogoSat-productos-servicios', title: 'Catalogo de claves del SAT', description: 'Base global de claves SAT para productos y servicios.', Icon: Database, color: 'border-l-blue-500 bg-blue-50 text-blue-600' },
   { href: '/configuracion', title: 'Configuración', description: 'Perfil fiscal, usuarios y apariencia.', Icon: Settings, color: 'border-l-slate-800 bg-slate-100 text-slate-700' },
 ] as const;
 
