@@ -9,6 +9,7 @@
     "start:docker": "node server.js",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
+    "db:seed:sat-ti": "tsx prisma/seed-catalogo-ti.ts",
     "db:init": "prisma db push && prisma db seed",
     "db:migrate": "prisma migrate deploy",
     "lint": "eslint"
