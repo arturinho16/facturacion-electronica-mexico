@@ -11,7 +11,7 @@ type Client = {
   calle?: string | null; numExterior?: string | null; numInterior?: string | null;
   colonia?: string | null; municipio?: string | null; estado?: string | null; pais?: string | null;
 };
-type CIFParsed = Omit<Client, 'id'>;
+type CSFParsed = Omit<Client, 'id'>;
 
 function Row({ label, value, important }: { label: string; value?: string | null; important?: boolean }) {
   const v = (value ?? '').trim();
@@ -24,17 +24,17 @@ function Row({ label, value, important }: { label: string; value?: string | null
   );
 }
 
-function CIFVerifyModal({ data, onClose, onEdit, onConfirmSave }: { data: CIFParsed; onClose: () => void; onEdit: () => void; onConfirmSave: () => void; }) {
+function CSFVerifyModal({ data, onClose, onEdit, onConfirmSave }: { data: CSFParsed; onClose: () => void; onEdit: () => void; onConfirmSave: () => void; }) {
   const requiredMissing = !data.rfc?.trim() || !data.nombreRazonSocial?.trim() || !data.cp?.trim() || !data.regimenFiscal?.trim();
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-b">
-          <div><div className="text-lg font-bold text-slate-900">Verificar datos de la CIF</div><div className="text-sm text-slate-500">Confirma antes de guardar el cliente</div></div>
+          <div><div className="text-lg font-bold text-slate-900">Verificar datos de la CSF</div><div className="text-sm text-slate-500">Confirma antes de guardar el cliente</div></div>
           <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full"><X className="w-5 h-5 text-slate-600" /></button>
         </div>
         <div className="p-6 overflow-y-auto">
-          {requiredMissing ? <div className="mb-4 p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-base">Faltan campos obligatorios. Da clic en <b>"Editar y completar"</b>.</div> : <div className="mb-4 p-3 rounded-xl border border-green-200 bg-green-50 text-green-800 text-base">✅ CIF leída correctamente. Puedes guardar directo o editar.</div>}
+          {requiredMissing ? <div className="mb-4 p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-base">Faltan campos obligatorios. Da clic en <b>"Editar y completar"</b>.</div> : <div className="mb-4 p-3 rounded-xl border border-green-200 bg-green-50 text-green-800 text-base">✅ CSF leída correctamente. Puedes guardar directo o editar.</div>}
           <div className="rounded-2xl border border-slate-200 overflow-hidden divide-y divide-slate-100">
             <Row label="RFC" value={data.rfc} important /><Row label="Nombre / Razón Social" value={data.nombreRazonSocial} important /><Row label="CP Fiscal" value={data.cp} important /><Row label="Régimen Fiscal" value={data.regimenFiscal} important /><Row label="Uso CFDI" value={data.usoCfdiDefault} /><Row label="Calle" value={data.calle} /><Row label="No. Exterior" value={data.numExterior} /><Row label="No. Interior" value={data.numInterior} /><Row label="Colonia" value={data.colonia} /><Row label="Municipio/Localidad" value={data.municipio} /><Row label="Estado" value={data.estado} /><Row label="País" value={data.pais || 'MEXICO'} />
           </div>
@@ -107,8 +107,8 @@ export default function ClientesPage() {
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<null | 'create' | 'edit'>(null);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
-  const [parsedCIF, setParsedCIF] = useState<CIFParsed | null>(null);
-  const [showCIFModal, setShowCIFModal] = useState(false);
+  const [parsedCSF, setParsedCSF] = useState<CSFParsed | null>(null);
+  const [showCSFModal, setShowCSFModal] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // ─── Paginación y Búsqueda ───
@@ -120,25 +120,25 @@ export default function ClientesPage() {
   useEffect(() => { fetchClients(); }, []);
   useEffect(() => { setPaginaActual(1); }, [q]); // Reset página al buscar
 
-  const handleCIF = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCSF = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     try {
-      const fd = new FormData(); fd.append('cif', file);
-      const res = await fetch('/api/clients/parse-cif', { method: 'POST', body: fd });
-      if (!res.ok) { alert('No se pudo leer la CIF. Captura manualmente.'); setMode('create'); return; }
+      const fd = new FormData(); fd.append('csf', file);
+      const res = await fetch('/api/clients/parse-csf', { method: 'POST', body: fd });
+      if (!res.ok) { alert('No se pudo leer la CSF. Captura manualmente.'); setMode('create'); return; }
       const data = await res.json();
-      const upper: CIFParsed = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, typeof v === 'string' && k !== 'email' ? v.toUpperCase() : v])) as CIFParsed;
+      const upper: CSFParsed = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, typeof v === 'string' && k !== 'email' ? v.toUpperCase() : v])) as CSFParsed;
       if (!upper.usoCfdiDefault) upper.usoCfdiDefault = 'G03';
-      setParsedCIF(upper); setShowCIFModal(true);
-    } catch { alert('No se pudo leer la CIF. Captura manualmente.'); setMode('create'); } finally { if (fileRef.current) fileRef.current.value = ''; }
+      setParsedCSF(upper); setShowCSFModal(true);
+    } catch { alert('No se pudo leer la CSF. Captura manualmente.'); setMode('create'); } finally { if (fileRef.current) fileRef.current.value = ''; }
   };
 
   const createClient = async (body: Record<string, string>) => { const res = await fetch('/api/clients', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err?.error || 'No se pudo guardar'); } };
   const updateClient = async (id: string, body: Record<string, string>) => { const res = await fetch(`/api/clients/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err?.error || 'No se pudo actualizar'); } };
   const deleteClient = async (id: string) => { if (!confirm('¿Eliminar este cliente?')) return; const res = await fetch(`/api/clients/${id}`, { method: 'DELETE' }); if (res.ok) fetchClients(); else alert('❌ No se pudo eliminar'); };
 
-  const onConfirmSaveFromModal = async () => { if (!parsedCIF) return; try { await createClient(parsedCIF as any); setShowCIFModal(false); setParsedCIF(null); await fetchClients(); alert('✅ Cliente guardado correctamente'); } catch (e: any) { alert('❌ Error: ' + (e?.message || 'No se pudo guardar')); } };
-  const resetForm = () => { setMode(null); setParsedCIF(null); setEditingClient(null); };
+  const onConfirmSaveFromModal = async () => { if (!parsedCSF) return; try { await createClient(parsedCSF as any); setShowCSFModal(false); setParsedCSF(null); await fetchClients(); alert('✅ Cliente guardado correctamente'); } catch (e: any) { alert('❌ Error: ' + (e?.message || 'No se pudo guardar')); } };
+  const resetForm = () => { setMode(null); setParsedCSF(null); setEditingClient(null); };
 
   // ── Filtrado y Paginación ──
   const clientesFiltrados = clients.filter(c => {
@@ -160,13 +160,13 @@ export default function ClientesPage() {
             <h1 className="text-3xl font-bold">Catálogo de Clientes</h1>
           </div>
           <div className="flex gap-3">
-            <label className="flex items-center gap-2 bg-white border-2 border-blue-300 text-blue-700 font-bold px-5 py-2.5 rounded-xl cursor-pointer hover:bg-blue-50 transition-all text-base"><Upload className="w-5 h-5" /> Subir CIF (PDF) <input ref={fileRef} type="file" accept=".pdf" className="hidden" onChange={handleCIF} /></label>
-            <button onClick={() => { setMode(mode === 'create' ? null : 'create'); setParsedCIF(null); setEditingClient(null); }} className="flex items-center gap-2 bg-blue-600 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 text-base"><UserPlus className="w-5 h-5" /> Nuevo Cliente</button>
+            <label className="flex items-center gap-2 bg-white border-2 border-blue-300 text-blue-700 font-bold px-5 py-2.5 rounded-xl cursor-pointer hover:bg-blue-50 transition-all text-base"><Upload className="w-5 h-5" /> Subir CSF (PDF) <input ref={fileRef} type="file" accept=".pdf" className="hidden" onChange={handleCSF} /></label>
+            <button onClick={() => { setMode(mode === 'create' ? null : 'create'); setParsedCSF(null); setEditingClient(null); }} className="flex items-center gap-2 bg-blue-600 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 text-base"><UserPlus className="w-5 h-5" /> Nuevo Cliente</button>
           </div>
         </div>
 
-        {showCIFModal && parsedCIF && <CIFVerifyModal data={parsedCIF} onClose={() => setShowCIFModal(false)} onEdit={() => { setShowCIFModal(false); setMode('create'); }} onConfirmSave={onConfirmSaveFromModal} />}
-        {mode === 'create' && <ClientForm title="Nuevo Cliente (CFDI 4.0)" submitLabel="Guardar Cliente" initial={parsedCIF || undefined} onCancel={resetForm} onSubmit={async (body) => { try { await createClient(body); alert('✅ Cliente guardado'); resetForm(); fetchClients(); } catch (err: any) { alert('❌ Error: ' + (err?.message || 'Error')); } }} />}
+        {showCSFModal && parsedCSF && <CSFVerifyModal data={parsedCSF} onClose={() => setShowCSFModal(false)} onEdit={() => { setShowCSFModal(false); setMode('create'); }} onConfirmSave={onConfirmSaveFromModal} />}
+        {mode === 'create' && <ClientForm title="Nuevo Cliente (CFDI 4.0)" submitLabel="Guardar Cliente" initial={parsedCSF || undefined} onCancel={resetForm} onSubmit={async (body) => { try { await createClient(body); alert('✅ Cliente guardado'); resetForm(); fetchClients(); } catch (err: any) { alert('❌ Error: ' + (err?.message || 'Error')); } }} />}
         {mode === 'edit' && editingClient && <ClientForm title={`Editar Cliente — ${editingClient.nombreRazonSocial}`} submitLabel="Guardar Cambios" initial={editingClient} onCancel={resetForm} onSubmit={async (body) => { try { await updateClient(editingClient.id, body); alert('✅ Cliente actualizado'); resetForm(); fetchClients(); } catch (err: any) { alert('❌ Error: ' + (err?.message || 'Error')); } }} />}
 
         {/* Buscador de clientes */}

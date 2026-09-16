@@ -72,7 +72,7 @@ type SatLoginModalProps = {
   }) => Promise<void>;
 };
 
-const TIPOS_CON_FECHA = EXPEDIENTE_TIPOS_DOCUMENTO.filter((tipo) => tipo.clave !== 'CIF');
+const TIPOS_CON_FECHA = EXPEDIENTE_TIPOS_DOCUMENTO.filter((tipo) => tipo.clave !== 'CSF');
 
 function hoyISO() {
   return new Date().toISOString().slice(0, 10);
@@ -274,7 +274,7 @@ export default function ExpedienteFiscalClient() {
   const perfilActual = EXPEDIENTE_PERFILES.find((perfil) => perfil.clave === perfilClave) || EXPEDIENTE_PERFILES[0];
 
   const [solicitudes, setSolicitudes] = useState<SolicitudExpediente[]>([]);
-  const [activeTab, setActiveTab] = useState<'cif' | 'documentos'>('cif');
+  const [activeTab, setActiveTab] = useState<'csf' | 'documentos'>('csf');
   const [satSesionActiva, setSatSesionActiva] = useState(false);
   const [satRfc, setSatRfc] = useState('');
   const [satRfcNombre, setSatRfcNombre] = useState('');
@@ -403,7 +403,7 @@ export default function ExpedienteFiscalClient() {
         body: JSON.stringify({
           perfil: perfilClave,
           tipo,
-          fecha: tipo === 'CIF' ? null : fechaConsulta,
+          fecha: tipo === 'CSF' ? null : fechaConsulta,
         }),
       });
       const data = await res.json();
@@ -415,7 +415,7 @@ export default function ExpedienteFiscalClient() {
       setMessage(data.mensaje || data.error || 'Consulta procesada.');
       await cargar();
 
-      if (tipo === 'CIF' && data.solicitud?.archivoDisponible) {
+      if (tipo === 'CSF' && data.solicitud?.archivoDisponible) {
         const link = document.createElement('a');
         link.href = `/api/expediente-fiscal/descargas/${data.solicitud.id}/archivo`;
         link.download = '';
@@ -570,14 +570,14 @@ export default function ExpedienteFiscalClient() {
               <div className="flex flex-wrap gap-2 border-b border-slate-100 p-4">
                 <button
                   type="button"
-                  onClick={() => setActiveTab('cif')}
+                  onClick={() => setActiveTab('csf')}
                   className={`rounded-xl border px-4 py-2 text-sm font-bold transition-colors ${
-                    activeTab === 'cif'
+                    activeTab === 'csf'
                       ? 'border-blue-200 bg-blue-50 text-blue-700'
                       : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                   }`}
                 >
-                  Constancia / CIF
+                  Constancia / CSF
                 </button>
                 <button
                   type="button"
@@ -592,7 +592,7 @@ export default function ExpedienteFiscalClient() {
                 </button>
               </div>
 
-              {activeTab === 'cif' ? (
+              {activeTab === 'csf' ? (
                 <div className="p-6">
                   <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
                     <div className="flex items-start gap-3">
@@ -600,7 +600,7 @@ export default function ExpedienteFiscalClient() {
                         <FileText className="h-6 w-6" />
                       </div>
                       <div>
-                        <h2 className="text-lg font-bold text-slate-800">Constancia de Situación Fiscal / CIF</h2>
+                        <h2 className="text-lg font-bold text-slate-800">Constancia de Situación Fiscal / CSF</h2>
                         <p className="mt-1 text-sm text-slate-500">
                           Este documento no requiere rango ni fecha. Sólo se solicita la descarga del RFC conectado.
                         </p>
@@ -610,11 +610,11 @@ export default function ExpedienteFiscalClient() {
                     <button
                       type="button"
                       disabled={consultaLoading}
-                      onClick={() => solicitarDescarga('CIF')}
+                      onClick={() => solicitarDescarga('CSF')}
                       className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50"
                     >
                       {consultaLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                      Verificar SAT y descargar CIF
+                      Verificar SAT y descargar CSF
                     </button>
                   </div>
                 </div>

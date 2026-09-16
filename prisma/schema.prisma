@@ -24,12 +24,12 @@ model Client {
   rfc               String   @unique
   //email             String?
   
-  nombreRazonSocial String   // EXACTO a la CIF (Mayúsculas)
+  nombreRazonSocial String   // EXACTO a la CSF (Mayúsculas)
   regimenFiscal     String   // Clave SAT (ej. 601, 626)
   cp                String   // Código Postal Fiscal
   usoCfdiDefault    String   @default("G03") // Por defecto Gastos en General
 
-  // Datos de Domicilio (Extraídos de la CIF)
+  // Datos de Domicilio (Extraídos de la CSF)
   calle             String?
   numExterior       String?
   numInterior       String?

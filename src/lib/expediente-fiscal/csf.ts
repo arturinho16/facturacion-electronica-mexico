@@ -3,7 +3,7 @@ import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { DescargaMasivaSAT } from '@/lib/sat/descarga-masiva';
 import { saveExpedienteFile } from '@/lib/expediente-fiscal/storage';
 
-export type ExpedienteCifSatCredentials = {
+export type ExpedienteCsfSatCredentials = {
   rfc: string;
   rfcNombre?: string;
   password: string;
@@ -11,10 +11,10 @@ export type ExpedienteCifSatCredentials = {
   keyString: string;
 };
 
-type CrearCifVerificadaInput = {
+type CrearCsfVerificadaInput = {
   perfilClave: string;
   requestId: string;
-  satCreds: ExpedienteCifSatCredentials;
+  satCreds: ExpedienteCsfSatCredentials;
   perfilRfc?: string | null;
   perfilRfcNombre?: string | null;
 };
@@ -79,12 +79,12 @@ function drawWrappedText(
   return currentY;
 }
 
-async function generarPdfCifVerificada(input: CrearCifVerificadaInput) {
+async function generarPdfCsfVerificada(input: CrearCsfVerificadaInput) {
   const rfc = (input.satCreds.rfc || input.perfilRfc || '').trim().toUpperCase();
   const nombre = (input.satCreds.rfcNombre || input.perfilRfcNombre || '').trim();
   const emitido = fechaMexico();
   const qrPayload = JSON.stringify({
-    tipo: 'EXPEDIENTE_FISCAL_CIF',
+    tipo: 'EXPEDIENTE_FISCAL_CSF',
     requestId: input.requestId,
     rfc,
     emitido,
@@ -99,9 +99,9 @@ async function generarPdfCifVerificada(input: CrearCifVerificadaInput) {
 
   page.drawRectangle({ x: 0, y: 730, width: 612, height: 62, color: rgb(0.05, 0.12, 0.2) });
   page.drawText('Expediente Fiscal', { x: 48, y: 760, size: 18, font: bold, color: rgb(1, 1, 1) });
-  page.drawText('Constancia de Situacion Fiscal / CIF', { x: 48, y: 739, size: 11, font, color: rgb(0.82, 0.88, 0.95) });
+  page.drawText('Constancia de Situacion Fiscal / CSF', { x: 48, y: 739, size: 11, font, color: rgb(0.82, 0.88, 0.95) });
 
-  page.drawText('CIF verificada para expediente', { x: 48, y: 680, size: 22, font: bold, color: rgb(0.08, 0.11, 0.18) });
+  page.drawText('CSF verificada para expediente', { x: 48, y: 680, size: 22, font: bold, color: rgb(0.08, 0.11, 0.18) });
   page.drawText('RFC', { x: 48, y: 628, size: 9, font: bold, color: rgb(0.39, 0.45, 0.55) });
   page.drawText(rfc || 'SIN RFC', { x: 48, y: 606, size: 18, font: bold, color: rgb(0.03, 0.27, 0.49) });
   page.drawText('Nombre registrado', { x: 48, y: 564, size: 9, font: bold, color: rgb(0.39, 0.45, 0.55) });
@@ -122,7 +122,7 @@ async function generarPdfCifVerificada(input: CrearCifVerificadaInput) {
   page.drawText('QR interno', { x: 456, y: 512, size: 9, font: bold, color: rgb(0.39, 0.45, 0.55) });
 
   const nota =
-    'La e.firma del perfil fue validada antes de generar este archivo. El portal del SAT genera la CSF/CIF oficial en una ventana de navegador; este archivo evita que la solicitud quede pendiente cuando el sistema no recibe un PDF directo desde descarga masiva.';
+    'La e.firma del perfil fue validada antes de generar este archivo. El portal del SAT genera la CSF oficial en una ventana de navegador; este archivo evita que la solicitud quede pendiente cuando el sistema no recibe un PDF directo desde descarga masiva.';
   drawWrappedText(page, nota, {
     x: 48,
     y: 342,
@@ -147,22 +147,22 @@ async function generarPdfCifVerificada(input: CrearCifVerificadaInput) {
   return Buffer.from(await pdf.save());
 }
 
-export async function crearCifVerificada(input: CrearCifVerificadaInput) {
+export async function crearCsfVerificada(input: CrearCsfVerificadaInput) {
   new DescargaMasivaSAT(input.satCreds.cerString, input.satCreds.keyString, input.satCreds.password);
 
   const rfc = (input.satCreds.rfc || input.perfilRfc || '').trim().toUpperCase();
   const nombre = (input.satCreds.rfcNombre || input.perfilRfcNombre || '').trim();
-  const buffer = await generarPdfCifVerificada(input);
+  const buffer = await generarPdfCsfVerificada(input);
   const saved = await saveExpedienteFile({
     perfil: input.perfilClave,
-    tipo: 'CIF',
-    fileName: `CIF_${safeFilePart(rfc)}_${input.requestId}.pdf`,
+    tipo: 'CSF',
+    fileName: `CSF_${safeFilePart(rfc)}_${input.requestId}.pdf`,
     mimeType: 'application/pdf',
     buffer,
   });
 
   return {
-    mensaje: `CIF verificada y archivo generado para ${rfc || 'RFC conectado'}. Token: ${input.requestId}.`,
+    mensaje: `CSF verificada y archivo generado para ${rfc || 'RFC conectado'}. Token: ${input.requestId}.`,
     metadata: {
       satRfc: rfc,
       satRfcNombre: nombre,

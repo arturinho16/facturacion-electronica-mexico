@@ -6,7 +6,7 @@ export const EXPEDIENTE_PERFILES = [
 ] as const;
 
 export const EXPEDIENTE_TIPOS_DOCUMENTO = [
-  { clave: 'CIF', label: 'Constancia de Situación Fiscal / CIF', criticidad: 'alta' },
+  { clave: 'CSF', label: 'Constancia de Situación Fiscal / CSF', criticidad: 'alta' },
   { clave: 'DECLARACION_PRESENTADA', label: 'Declaraciones presentadas', criticidad: 'alta' },
   { clave: 'DECLARACION_PENDIENTE', label: 'Declaraciones pendientes', criticidad: 'alta' },
   { clave: 'ACUSE', label: 'Acuses y comprobantes', criticidad: 'media' },
@@ -42,7 +42,7 @@ export function normalizarExpedientePerfil(input: unknown): ExpedientePerfilClav
 
 export function normalizarExpedienteTipo(input: unknown): ExpedienteTipoDocumento {
   const value = String(input || '').trim().toUpperCase();
-  return TIPO_CLAVES.has(value) ? (value as ExpedienteTipoDocumento) : 'CIF';
+  return TIPO_CLAVES.has(value) ? (value as ExpedienteTipoDocumento) : 'CSF';
 }
 
 export function normalizarExpedienteEstatus(input: unknown): ExpedienteEstatus {

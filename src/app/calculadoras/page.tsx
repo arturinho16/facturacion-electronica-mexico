@@ -533,10 +533,10 @@ export default function CalculadorasPage() {
                 <Field label="Modo">
                   <select className={inputClass} value={iva.mode} onChange={(e) => setIva({ ...iva, mode: e.target.value as IvaMode })}>
                     <option value="agregar">Agregar IVA</option>
-                    <option value="desglosar">Desglosar IVA incluido</option>
+                    <option value="desglosar">Producto con IVA incluido</option>
                   </select>
                 </Field>
-                <Field label={iva.mode === 'agregar' ? 'Monto base' : 'Monto con IVA'}>
+                <Field label={iva.mode === 'agregar' ? 'Monto base' : 'Precio con IVA incluido'}>
                   <NumericInput value={iva.amount} onChange={(value) => setIva({ ...iva, amount: value })} />
                 </Field>
                 <Field label="Tasa IVA %">

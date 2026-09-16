@@ -74,7 +74,7 @@ const NAV_ITEMS = [
 ] as const;
 
 const MODULE_CARDS = [
-  { href: '/catalogos/clientes', title: 'Clientes', description: 'Sube la CIF de tus clientes', Icon: Users, color: 'border-l-emerald-500 bg-emerald-50 text-emerald-600' },
+  { href: '/catalogos/clientes', title: 'Clientes', description: 'Sube la CSF de tus clientes', Icon: Users, color: 'border-l-emerald-500 bg-emerald-50 text-emerald-600' },
   { href: '/catalogos/productos', title: 'Productos', description: 'Productos y servicios a facturar', Icon: Package, color: 'border-l-violet-500 bg-violet-50 text-violet-600' },
 
   { href: '/facturas/nueva', title: 'Nueva Factura', description: 'Generar CFDI 4.0 al instante.', Icon: FileText, color: 'border-l-sky-500 bg-sky-50 text-sky-600' },

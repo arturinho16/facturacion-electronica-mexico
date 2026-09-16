@@ -13,7 +13,7 @@ import {
 } from '@/lib/expediente-fiscal/catalogos';
 import { ensureExpedienteFiscalSchema } from '@/lib/expediente-fiscal/schema';
 import { startExpedienteFiscalCron } from '@/lib/expediente-fiscal/cron';
-import { crearCifVerificada } from '@/lib/expediente-fiscal/cif';
+import { crearCsfVerificada } from '@/lib/expediente-fiscal/csf';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
     const perfilClave = normalizarExpedientePerfil(body?.perfil);
     const tipo = normalizarExpedienteTipo(body?.tipo);
     const fecha = typeof body?.fecha === 'string' ? body.fecha.trim() : '';
-    const requiereFecha = tipo !== 'CIF';
+    const requiereFecha = tipo !== 'CSF';
     const session = getSatSession(perfilClave);
 
     if (!session) {
@@ -118,29 +118,29 @@ export async function POST(req: NextRequest) {
     const tipoLabel = expedienteTipoLabel(tipo);
     const requestId = generarTokenExpediente();
     const mensaje =
-      tipo === 'CIF'
+      tipo === 'CSF'
         ? `Solicitud registrada para verificación SAT. Token de seguimiento: ${requestId}.`
         : `Solicitud registrada para ${tipoLabel} del ${fecha}. Token de seguimiento: ${requestId}.`;
 
-    if (tipo === 'CIF') {
-      const pendienteCif = await prisma.expedienteFiscalSolicitud.findFirst({
+    if (tipo === 'CSF') {
+      const pendienteCsf = await prisma.expedienteFiscalSolicitud.findFirst({
         where: {
           perfilId: perfil.id,
-          tipo: 'CIF',
+          tipo: 'CSF',
           estado: { in: ['PENDIENTE', 'EN_PROCESO', 'PENDIENTE_DESCARGA_SAT'] },
         },
         orderBy: { createdAt: 'desc' },
       });
 
-      if (pendienteCif) {
+      if (pendienteCsf) {
         const satCreds = getSatCredentialsAsBinary(perfilClave) || (perfilClave === 'principal' ? await getFielCredentialsAsBinary() : null);
 
         if (!satCreds) {
           const updated = await prisma.expedienteFiscalSolicitud.update({
-            where: { id: pendienteCif.id },
+            where: { id: pendienteCsf.id },
             data: {
               estado: 'EN_PROCESO',
-              mensaje: 'Solicitud CIF registrada. Conecta la e.firma de este perfil para completar la verificación SAT.',
+              mensaje: 'Solicitud CSF registrada. Conecta la e.firma de este perfil para completar la verificación SAT.',
             },
           });
 
@@ -154,23 +154,23 @@ export async function POST(req: NextRequest) {
           });
         }
 
-        const cif = await crearCifVerificada({
+        const csf = await crearCsfVerificada({
           perfilClave,
-          requestId: pendienteCif.requestId,
+          requestId: pendienteCsf.requestId,
           satCreds,
           perfilRfc: perfil.rfc,
           perfilRfcNombre: perfil.rfcNombre,
         });
 
         const updated = await prisma.expedienteFiscalSolicitud.update({
-          where: { id: pendienteCif.id },
+          where: { id: pendienteCsf.id },
           data: {
             estado: 'COMPLETADA',
-            mensaje: cif.mensaje,
+            mensaje: csf.mensaje,
             metadata: {
               fecha: null,
               requiereFecha,
-              ...cif.metadata,
+              ...csf.metadata,
             },
           },
         });
@@ -178,7 +178,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
           ok: true,
           requestId: updated.requestId,
-          mensaje: cif.mensaje,
+          mensaje: csf.mensaje,
           solicitud: serializeSolicitud(updated),
         });
       }
@@ -189,7 +189,7 @@ export async function POST(req: NextRequest) {
         requestId,
         perfilId: perfil.id,
         tipo,
-        estado: tipo === 'CIF' ? 'EN_PROCESO' : 'PENDIENTE',
+        estado: tipo === 'CSF' ? 'EN_PROCESO' : 'PENDIENTE',
         mensaje,
         metadata: {
           fecha: requiereFecha ? fecha : null,
@@ -200,7 +200,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    if (tipo === 'CIF') {
+    if (tipo === 'CSF') {
       const satCreds = getSatCredentialsAsBinary(perfilClave) || (perfilClave === 'principal' ? await getFielCredentialsAsBinary() : null);
 
       if (!satCreds) {
@@ -208,7 +208,7 @@ export async function POST(req: NextRequest) {
           where: { id: solicitud.id },
           data: {
             estado: 'EN_PROCESO',
-            mensaje: 'Solicitud CIF registrada. Conecta la e.firma de este perfil para completar la verificación SAT.',
+            mensaje: 'Solicitud CSF registrada. Conecta la e.firma de este perfil para completar la verificación SAT.',
           },
         });
 
@@ -222,7 +222,7 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      const cif = await crearCifVerificada({
+      const csf = await crearCsfVerificada({
         perfilClave,
         requestId,
         satCreds,
@@ -234,11 +234,11 @@ export async function POST(req: NextRequest) {
         where: { id: solicitud.id },
         data: {
           estado: 'COMPLETADA',
-          mensaje: cif.mensaje,
+          mensaje: csf.mensaje,
           metadata: {
             fecha: null,
             requiereFecha,
-            ...cif.metadata,
+            ...csf.metadata,
           },
         },
       });
@@ -246,7 +246,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         ok: true,
         requestId,
-        mensaje: cif.mensaje,
+        mensaje: csf.mensaje,
         solicitud: serializeSolicitud(updated),
       });
     }
