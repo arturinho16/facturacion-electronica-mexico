@@ -6,7 +6,7 @@ import { getFielCredentialsAsBinary } from '@/lib/configuracion';
 import { ensurePerfilDescargaSat } from '@/lib/sat/perfiles';
 import { expedienteTipoLabel, normalizarExpedientePerfil, normalizarExpedienteTipo } from '@/lib/expediente-fiscal/catalogos';
 import { ensureExpedienteFiscalSchema } from '@/lib/expediente-fiscal/schema';
-import { crearCifVerificada } from '@/lib/expediente-fiscal/cif';
+import { crearCsfVerificada } from '@/lib/expediente-fiscal/csf';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -82,9 +82,9 @@ export async function GET(req?: NextRequest) {
       const tipo = normalizarExpedienteTipo(solicitud.tipo);
       const tipoLabel = expedienteTipoLabel(tipo);
 
-      if (tipo === 'CIF') {
+      if (tipo === 'CSF') {
         try {
-          const cif = await crearCifVerificada({
+          const csf = await crearCsfVerificada({
             perfilClave,
             requestId: solicitud.requestId,
             satCreds: satSession,
@@ -96,12 +96,12 @@ export async function GET(req?: NextRequest) {
             where: { id: solicitud.id },
             data: {
               estado: 'COMPLETADA',
-              mensaje: cif.mensaje,
+              mensaje: csf.mensaje,
               metadata: {
                 ...metadata,
                 fecha: null,
                 requiereFecha: false,
-                ...cif.metadata,
+                ...csf.metadata,
               },
             },
           });
@@ -112,7 +112,7 @@ export async function GET(req?: NextRequest) {
             where: { id: solicitud.id },
             data: {
               estado: 'ERROR',
-              mensaje: error instanceof Error ? error.message : 'No fue posible verificar la CIF con la e.firma.',
+              mensaje: error instanceof Error ? error.message : 'No fue posible verificar la CSF con la e.firma.',
             },
           });
           errores++;

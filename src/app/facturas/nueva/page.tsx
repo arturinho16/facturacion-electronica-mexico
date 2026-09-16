@@ -13,6 +13,7 @@ import {
   CheckCircle,
   FileCode,
   Receipt,
+  Calculator,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -164,6 +165,8 @@ type DatosExtraidosXML = {
   cadenaOriginal?: string;
 };
 
+type IvaCalculatorMode = 'agregar' | 'incluido';
+
 // ─── Catálogos y Helpers ──────────────────────────────────────────────────────
 const FORMAS_PAGO = [
   { clave: '01', descripcion: 'Efectivo' },
@@ -201,6 +204,11 @@ const EMPTY_EMISOR: EmpresaEmisorPDF = {
 };
 
 const fmt = formatMoneyMX;
+
+const positiveNumber = (value: unknown) => {
+  const parsed = Number(String(value ?? '').replace(',', '.'));
+  return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+};
 
 const fmtFecha = (d: string) =>
   new Date(d).toLocaleDateString('es-MX', {
@@ -906,6 +914,110 @@ function ModalVistaPrevia({
   );
 }
 
+function IvaCalculatorModal({ onClose }: { onClose: () => void }) {
+  const [mode, setMode] = useState<IvaCalculatorMode>('agregar');
+  const [amount, setAmount] = useState(1000);
+  const [rate, setRate] = useState(16);
+
+  const rateDecimal = positiveNumber(rate) / 100;
+  const inputAmount = positiveNumber(amount);
+  const subtotal = mode === 'agregar'
+    ? inputAmount
+    : rateDecimal > 0 ? inputAmount / (1 + rateDecimal) : inputAmount;
+  const iva = mode === 'agregar' ? subtotal * rateDecimal : inputAmount - subtotal;
+  const total = mode === 'agregar' ? subtotal + iva : inputAmount;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden">
+        <div className="flex items-center justify-between p-6 border-b border-slate-200 bg-slate-50">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center shadow-inner">
+              <Calculator className="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800">Calculadora IVA</h2>
+              <p className="text-sm text-slate-500">Agregar o separar IVA incluido</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-600 p-3 rounded-2xl hover:bg-slate-100 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <label className="space-y-1 md:col-span-3">
+              <span className="text-xs font-bold uppercase text-slate-500">Modo</span>
+              <select
+                value={mode}
+                onChange={(e) => setMode(e.target.value as IvaCalculatorMode)}
+                className="w-full p-2.5 border rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="agregar">Agregar IVA</option>
+                <option value="incluido">Producto con IVA incluido</option>
+              </select>
+            </label>
+
+            <label className="space-y-1 md:col-span-2">
+              <span className="text-xs font-bold uppercase text-slate-500">
+                {mode === 'agregar' ? 'Monto base' : 'Precio con IVA incluido'}
+              </span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(positiveNumber(e.target.value))}
+                className="w-full p-2.5 border rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </label>
+
+            <label className="space-y-1">
+              <span className="text-xs font-bold uppercase text-slate-500">Tasa IVA %</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={rate}
+                onChange={(e) => setRate(positiveNumber(e.target.value))}
+                className="w-full p-2.5 border rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </label>
+          </div>
+
+          <div className="bg-slate-50 rounded-2xl p-5 space-y-2 border border-slate-100 shadow-sm">
+            <div className="flex justify-between text-lg text-slate-600">
+              <span>Subtotal</span>
+              <span className="font-mono">{fmt(subtotal)}</span>
+            </div>
+            <div className="flex justify-between text-lg text-slate-600">
+              <span>IVA {positiveNumber(rate).toFixed(2)}%</span>
+              <span className="font-mono text-orange-500">{fmt(iva)}</span>
+            </div>
+            <div className="flex justify-between text-2xl font-black text-blue-900 border-t border-slate-200 pt-3 mt-2">
+              <span>Total</span>
+              <span className="font-mono">{fmt(total)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end p-6 border-t border-slate-200 bg-slate-50">
+          <button
+            onClick={onClose}
+            className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
+          >
+            Listo
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Componente Principal ─────────────────────────────────────────────────────
 function NuevaFacturaForm() {
   const searchParams = useSearchParams();
@@ -918,6 +1030,7 @@ function NuevaFacturaForm() {
   const [facturaGuardada, setFacturaGuardada] =
     useState<FacturaGuardada | null>(null);
   const [descargando, setDescargando] = useState(false);
+  const [showIvaCalculator, setShowIvaCalculator] = useState(false);
   const [emisorConfig, setEmisorConfig] = useState<EmpresaEmisorPDF>(EMPTY_EMISOR);
 
   const cdmxInicial = getCDMXInfo();
@@ -1343,6 +1456,7 @@ function NuevaFacturaForm() {
           emisor={emisorConfig}
         />
       )}
+      {showIvaCalculator && <IvaCalculatorModal onClose={() => setShowIvaCalculator(false)} />}
 
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
@@ -1357,6 +1471,14 @@ function NuevaFacturaForm() {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setShowIvaCalculator(true)}
+            className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 transition-all font-bold text-base shadow-lg shadow-blue-200"
+          >
+            <Calculator className="w-5 h-5" /> Calculadora IVA
+          </button>
+
           <Link
             href="/facturas"
             className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl hover:bg-indigo-700 transition-all font-bold text-base shadow-lg shadow-indigo-100"
